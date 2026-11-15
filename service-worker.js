@@ -1,4 +1,4 @@
-const CACHE='mind-reader-v0.2.1';
+const CACHE='mind-reader-v0.2.2';
 const ASSETS=['./','./index.html','./styles.css','./manifest.webmanifest','./icon.svg','./js/app.js','./js/engine.js','./js/data.js'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil((async()=>{
