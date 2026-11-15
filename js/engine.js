@@ -1,4 +1,4 @@
-import {entries,questions} from './data.js';
+import {entries,questions} from './data.js?v=0.2.4';
 export const ANSWERS=[['yes','Yes'],['no','No'],['probably','Probably'],['probablyNot','Probably not'],['unknown',"Don't know"]];
 const CATEGORIES={real:'people',fictional:'characters',animal:'animals',place:'places',object:'objects'};
 const EXCLUSIVE_GROUPS=[Object.keys(CATEGORIES),['country','city','landmark'],['uk','france','ireland','usa']];
