@@ -1,4 +1,4 @@
-import {entries,questions} from './data.js?v=0.2.4';
+import {entries,questions} from './data.js?v=0.3.0';
 export const ANSWERS=[['yes','Yes'],['no','No'],['probably','Probably'],['probablyNot','Probably not'],['unknown',"Don't know"]];
 const CATEGORIES={real:'people',fictional:'characters',animal:'animals',place:'places',object:'objects'};
 const EXCLUSIVE_GROUPS=[Object.keys(CATEGORIES),['country','city','landmark'],['uk','france','ireland','usa']];
@@ -12,6 +12,7 @@ const groupFor=id=>EXCLUSIVE_GROUPS.find(group=>group.includes(id));
 function fact(entry,id){
  if(Object.hasOwn(CATEGORIES,id))return CATEGORIES[id]===entry.category?1:0;
  if(entry.yes.includes(id))return 1;
+ if(entry.no?.includes(id))return 0;
  if(entry.category==='places'){
   if(PLACE_TYPES.has(id))return entry.yes.some(tag=>PLACE_TYPES.has(tag))?0:.5;
   // The starter place database uses exactly one of these country tags.
@@ -36,8 +37,8 @@ function consistent(entry,history){
  return true;
 }
 export class Game{
- constructor(category=null){
-  this.category=category;this.pool=entries.filter(e=>!category||e.category===category);
+ constructor(category=null,learned=[]){
+  this.category=category;this.pool=[...entries,...learned].filter(e=>!category||e.category===category);
   this.history=[];this.rejected=[];this.guesses=0;this.question=null;this.done=false;
   this.next();
  }
@@ -106,9 +107,9 @@ export class Game{
  shouldGuess(){
   const ranked=this.scores();if(!ranked.length)return false;
   if(this.history.length<3&&this.question)return false;
-  if(!this.question||this.history.length>=30)return true;
+  if(!this.question||this.history.length>=30)return ranked[0].probability>=.5&&this.history.length>=3;
   const top=ranked[0].probability,runnerUp=ranked[1]?.probability||0;
-  return (top>=.78&&top-runnerUp>=.45)||(this.history.length>=20&&top>=.38&&top-runnerUp>=.18);
+  return (this.history.length>=5&&top>=.78&&top-runnerUp>=.45)||(this.history.length>=20&&top>=.38&&top-runnerUp>=.18);
  }
  guessWrong(){
   const candidate=this.candidate();if(candidate)this.rejected.push(candidate.id);
