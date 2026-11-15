@@ -2,7 +2,7 @@
 
 An Akinator-style, local-first guessing game built as a progressive web app.
 
-## Current status: v0.2.2 prototype
+## Current status: v0.2.3 prototype
 
 The first playable prototype has been committed to the `main` branch. It is **not yet v1.0**.
 
@@ -33,8 +33,12 @@ This prototype uses a small hand-authored dataset and probability-weighted scori
 ### Planned release
 Version 1.0.0 after learning, persistence, accuracy benchmarks, accessibility review, and offline/update tests are complete.
 
-## v0.2.2 place-logic fix
+## v0.2.3 place-logic fix
 - Explicit country and place-type exclusions prevent incompatible follow-up questions.
 - London and Paris can now be distinguished by United Kingdom and France questions.
 - Regression coverage for a European-city answer path.
 - The knowledge set is still small; the engine may not recognize places outside it.
+
+## v0.2.3 category-play correction
+- Fixes immediate name guessing in fictional characters by making category-specific trait negatives explicit for the curated starter data.
+- Adds tests for first-question behavior across all five categories and three unanswered fictional-character questions.
