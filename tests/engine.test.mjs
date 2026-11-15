@@ -79,3 +79,29 @@ test('United Kingdom answer separates London from Paris',()=>{
  assert.notEqual(g.question?.id,'france');
  assert.notEqual(g.question?.id,'usa');
 });
+
+test('fictional character play asks traits before guessing names',()=>{
+ const g=new Game('characters');
+ assert.ok(g.question,'first question must exist');
+ assert.equal(g.shouldGuess(),false,'do not guess immediately');
+ for(let i=0;i<3;i++){
+  assert.ok(g.question,'question '+(i+1)+' should exist');
+  assert.equal(g.shouldGuess(),false,'no premature guess at '+i);
+  g.answer('unknown');
+ }
+ assert.ok(g.question,'continue asking after three unknown answers');
+});
+test('characters have meaningful positive and negative trait facts',()=>{
+ const sherlock=entries.find(x=>x.name==='Sherlock Holmes');
+ const batman=entries.find(x=>x.name==='Batman');
+ assert.equal(fact(sherlock,'detective'),1);
+ assert.equal(fact(sherlock,'superhero'),0);
+ assert.equal(fact(batman,'superhero'),1);
+});
+test('all categories start with an actual question, not a guess',()=>{
+ for(const category of ['people','characters','animals','places','objects']){
+  const g=new Game(category);
+  assert.ok(g.question,category+' must have a question');
+  assert.equal(g.shouldGuess(),false,category+' must not guess immediately');
+ }
+});
