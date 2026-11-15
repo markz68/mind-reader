@@ -46,3 +46,36 @@ test('question limit and rejected guesses',()=>{
  const first=g.candidate().id;g.guessWrong();
  assert.ok(!g.scores().some(x=>x.entry.id===first));
 });
+
+test('London and Paris have distinct, explicit geography',()=>{
+ const london=entries.find(x=>x.name==='London');
+ const paris=entries.find(x=>x.name==='Paris');
+ assert.equal(fact(london,'uk'),1);
+ assert.equal(fact(london,'france'),0);
+ assert.equal(fact(paris,'france'),1);
+ assert.equal(fact(paris,'uk'),0);
+ assert.equal(fact(london,'landmark'),0);
+});
+test('European city answers exclude incompatible place types and countries',()=>{
+ const g=new Game('places');
+ g.question={id:'europe',text:'Is it in Europe?'};g.answer('yes');
+ assert.notEqual(g.question?.id,'usa');
+ g.question={id:'city',text:'Is it a city?'};g.answer('yes');
+ assert.notEqual(g.question?.id,'landmark');
+ assert.notEqual(g.question?.id,'country');
+ const names=g.scores().map(x=>x.entry.name);
+ assert.ok(names.includes('London'));
+ assert.ok(names.includes('Paris'));
+ assert.ok(!names.includes('New York City'));
+ assert.ok(!names.includes('Eiffel Tower'));
+ assert.ok(g.scores().every(x=>x.entry.yes.includes('city')));
+});
+test('United Kingdom answer separates London from Paris',()=>{
+ const g=new Game('places');
+ g.question={id:'europe',text:'Is it in Europe?'};g.answer('yes');
+ g.question={id:'city',text:'Is it a city?'};g.answer('yes');
+ g.question={id:'uk',text:'Is it in the United Kingdom?'};g.answer('yes');
+ assert.equal(g.candidate().name,'London');
+ assert.notEqual(g.question?.id,'france');
+ assert.notEqual(g.question?.id,'usa');
+});
