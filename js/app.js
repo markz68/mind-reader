@@ -1,4 +1,4 @@
-import {Game,ANSWERS} from './engine.js';
+import {Game,ANSWERS} from './engine.js?v=0.2.4';
 const $=id=>document.getElementById(id);let game=null;let current='home';let stats=load();function load(){try{return JSON.parse(localStorage.getItem('mind-reader-stats'))||{wins:0,losses:0,abandoned:0,games:[]}}catch{return {wins:0,losses:0,abandoned:0,games:[]}}}function save(){localStorage.setItem('mind-reader-stats',JSON.stringify(stats))}
 function show(id){current=id;for(const el of ['home','game','result','settings'])$(el).classList.toggle('hidden',el!==id)}
 function start(category=null){game=new Game(category);show('game');render()}
