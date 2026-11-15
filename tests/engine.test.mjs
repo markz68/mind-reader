@@ -105,3 +105,16 @@ test('all categories start with an actual question, not a guess',()=>{
   assert.equal(g.shouldGuess(),false,category+' must not guess immediately');
  }
 });
+
+test('learned candidates participate in category games',()=>{
+ const custom={id:'animals-cheetah',name:'Cheetah',category:'animals',yes:['mammal'],no:['pet'],aliases:[]};
+ const g=new Game('animals',[custom]);
+ assert.ok(g.pool.some(x=>x.name==='Cheetah'));
+ assert.ok(g.question);
+ assert.equal(fact(custom,'pet'),0);
+});
+test('learning validation rejects contradictory facts',async()=>{
+ const {validEntry}=await import('../js/storage.js');
+ assert.equal(validEntry({id:'animals-cheetah',name:'Cheetah',category:'animals',yes:['mammal'],no:['mammal']}),false);
+ assert.equal(validEntry({id:'animals-cheetah',name:'Cheetah',category:'animals',yes:['mammal'],no:['pet']}),true);
+});
