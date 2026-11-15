@@ -4,6 +4,7 @@ const CATEGORIES={real:'people',fictional:'characters',animal:'animals',place:'p
 const EXCLUSIVE_GROUPS=[Object.keys(CATEGORIES),['country','city','landmark'],['uk','france','ireland','usa']];
 const PLACE_TYPES=new Set(['country','city','landmark']);
 const REGIONS=new Set(['europe','usa','uk','france','ireland']);
+const CATEGORY_TRAITS={people:new Set(['alive','historical','science','music','sports','royalty','space']),characters:new Set(['superhero','magic','movie','television','book','detective','space','royalty']),animals:new Set(['mammal','bird','water','pet','large','flight']),objects:new Set(['electronic','transport','kitchen','handheld','communication','flight','large'])};
 const LABELS=Object.fromEntries(questions.map(q=>[q.id,q.text]));
 const RESPONSE_PROB={yes:.96,no:.04,probably:.73,probablyNot:.27,unknown:null};
 const entropy=p=>p<=0||p>=1?0:-p*Math.log2(p)-(1-p)*Math.log2(1-p);
@@ -19,7 +20,11 @@ function fact(entry,id){
   if(id==='europe'&&entry.yes.includes('usa'))return 0;
   if(id==='usa'&&entry.yes.includes('europe'))return 0;
  }
- return .5; // Missing information is not a definitive No.
+ // Within each small, curated category, its defining traits are recorded
+ // explicitly. This lets questions split characters, animals, and objects.
+ // Attributes outside that category remain unknown.
+ if(CATEGORY_TRAITS[entry.category]?.has(id))return 0;
+ return .5; // Other missing information remains unknown.
 }
 function consistent(entry,history){
  for(const h of history){
@@ -100,8 +105,8 @@ export class Game{
  candidate(){return this.scores()[0]?.entry||null}
  shouldGuess(){
   const ranked=this.scores();if(!ranked.length)return false;
+  if(this.history.length<3&&this.question)return false;
   if(!this.question||this.history.length>=30)return true;
-  if(this.history.length<3)return false;
   const top=ranked[0].probability,runnerUp=ranked[1]?.probability||0;
   return (top>=.78&&top-runnerUp>=.45)||(this.history.length>=20&&top>=.38&&top-runnerUp>=.18);
  }
