@@ -208,3 +208,20 @@ test('contradictory evidence never restores excluded candidates',()=>{
  assert.equal(g.scores().length,0);
  assert.equal(g.candidate(),null);
 });
+
+test('five questions with no remaining useful question can produce a guess',()=>{
+ const g=new Game('animals');
+ for(const [id,answer] of [['fast','yes'],['striped','no'],['spotted','yes'],['mane','no'],['africa','yes']]){
+  g.question={id,text:id};g.answer(answer);
+ }
+ g.question=null;
+ assert.equal(g.candidate()?.name,'Cheetah');
+ assert.equal(g.shouldGuess(),true);
+});
+test('exhausted candidate pool continues collecting facts',()=>{
+ const g=new Game('animals');
+ g.question={id:'mammal',text:'Mammal?'};g.answer('yes');
+ g.question={id:'bird',text:'Bird?'};g.answer('yes');
+ assert.equal(g.candidate(),null);
+ assert.ok(g.question,'should continue asking instead of ending after two conflicting facts');
+});
