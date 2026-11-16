@@ -1,4 +1,4 @@
-import {entries,questions} from './data.js?v=0.4.1';
+import {entries,questions} from './data.js?v=0.4.2';
 export const ANSWERS=[['yes','Yes'],['no','No'],['probably','Probably'],['probablyNot','Probably not'],['unknown',"Don't know"]];
 const CATEGORIES={real:'people',fictional:'characters',animal:'animals',place:'places',object:'objects'};
 const EXCLUSIVE_GROUPS=[Object.keys(CATEGORIES),['country','city','landmark'],['uk','france','ireland','usa']];
@@ -95,10 +95,13 @@ export class Game{
    if(this.category==='places'&&['real','fictional','animal','object'].includes(q.id))continue;
    const yes=ranked.reduce((s,x)=>s+(fact(x.entry,q.id)===1?x.probability:0),0);
    const no=ranked.reduce((s,x)=>s+(fact(x.entry,q.id)===0?x.probability:0),0);
-   // Only ask questions that distinguish known positive from known negative facts.
-   if(yes<.025||no<.025)continue;
-   const known=yes+no;
-   const gain=known*entropy(yes/known);
+   const unknown=Math.max(0,1-yes-no);
+   // Unknown facts are not negative evidence, but can still justify a question.
+   // Prioritize questions that divide the remaining candidates, including
+   // known-vs-unknown splits. Avoid questions with almost no informative facts.
+   if(yes+no<.08)continue;
+   const probabilityYes=yes+unknown*.5;
+   const gain=entropy(probabilityYes)*(yes+no*.9+unknown*.3);
    if(gain>bestGain+1e-8){best=q;bestGain=gain}
   }
   this.question=best;
@@ -117,7 +120,7 @@ export class Game{
   if(!this.question||this.history.length>=30)return this.history.length>0;
   const top=ranked[0].probability,runnerUp=ranked[1]?.probability||0;
   // Prefer a useful discriminating question over an early name guess.
-  return (this.history.length>=8&&top>=.92&&top-runnerUp>=.70)||(this.history.length>=20&&top>=.65&&top-runnerUp>=.35);
+  return (this.history.length>=10&&top>=.96&&top-runnerUp>=.82)||(this.history.length>=20&&top>=.75&&top-runnerUp>=.55);
  }
  guessWrong(){
   const candidate=this.candidate();if(candidate)this.rejected.push(candidate.id);
