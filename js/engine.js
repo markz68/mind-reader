@@ -1,4 +1,4 @@
-import {entries,questions} from './data.js?v=0.4.6';
+import {entries,questions} from './data.js?v=0.4.7';
 export const ANSWERS=[['yes','Yes'],['no','No'],['probably','Probably'],['probablyNot','Probably not'],['unknown',"Don't know"]];
 const CATEGORIES={real:'people',fictional:'characters',animal:'animals',place:'places',object:'objects'};
 const EXCLUSIVE_GROUPS=[Object.keys(CATEGORIES),['country','city','landmark'],['uk','france','ireland','usa']];
@@ -14,7 +14,10 @@ function fact(entry,id){
  if(entry.yes.includes(id))return 1;
  if(entry.no?.includes(id))return 0;
  // Personal answers record only confirmed facts. Unanswered traits are unknown.
- if(Array.isArray(entry.no))return .5;
+ if(Array.isArray(entry.no)){
+  if(entry.builtIn&&CATEGORY_TRAITS[entry.category]?.has(id))return 0;
+  return .5;
+ }
  if(entry.category==='places'){
   if(PLACE_TYPES.has(id))return entry.yes.some(tag=>PLACE_TYPES.has(tag))?0:.5;
   // The starter place database uses exactly one of these country tags.
@@ -143,7 +146,7 @@ export class Game{
   }
   // If weighted selection found no split, ask an unasked trait that can
   // distinguish any of the remaining candidates before guessing names.
-  if(!best&&this.history.length<12){
+  if(!best&&this.history.length<30){
    const top=ranked.slice(0,Math.min(12,ranked.length));
    let fallback=-1;
    for(const q of questions){
@@ -154,6 +157,11 @@ export class Game{
     const score=Math.min(yes,no)*3+yes+no;
     if(yes>0&&score>fallback){fallback=score;best=q}
    }
+  }
+  // Never concede while an informative, unasked question remains.
+  if(!best){
+   const pool=ranked.slice(0,Math.min(8,ranked.length));
+   best=questions.find(q=>!asked.has(q.id)&&!this.implied(q.id)&&(!this.category||!Object.hasOwn(CATEGORIES,q.id))&&pool.some(x=>fact(x.entry,q.id)===1))||null;
   }
   this.question=best;
  }
@@ -175,7 +183,7 @@ export class Game{
   // When no useful questions remain, try candidates rather than ending without a guess.
   // Never make a name guess from only two broad traits. With no useful
   // questions left, a guess is allowed only after a minimum evidence floor.
-  if(!this.question||this.history.length>=30)return this.history.length>=4&&ranked[0].probability>=.5;
+  if(!this.question||this.history.length>=30)return this.history.length>=4;
   const top=ranked[0].probability,runnerUp=ranked[1]?.probability||0;
   // Prefer a useful discriminating question over an early name guess.
   return (this.history.length>=12&&top>=.97&&top-runnerUp>=.85)||(this.history.length>=20&&top>=.8&&top-runnerUp>=.6);
