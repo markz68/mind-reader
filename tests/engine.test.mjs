@@ -259,3 +259,37 @@ test('animal missing facts remain unknown rather than implicit no',()=>{
  assert.equal(fact(elephant,'large'),1);
  assert.equal(fact(entries.find(x=>x.name==='Giraffe'),'spotted'),1);
 });
+
+test('expanded built-in database includes cow and broad animal groups',()=>{
+ const animals=entries.filter(e=>e.category==='animals');
+ assert.ok(animals.length>=150,'animal entries: '+animals.length);
+ for(const name of ['Cow','Sheep','Goat','Pig','Chicken','Duck','Rabbit','Buffalo','Bison','Frog','Salmon','Spider']){
+  assert.ok(animals.some(e=>e.name===name),name+' missing');
+ }
+});
+test('cow facts and taxonomy remain internally consistent',()=>{
+ const cow=entries.find(e=>e.name==='Cow');
+ assert.equal(fact(cow,'mammal'),1);
+ assert.equal(fact(cow,'farm'),1);
+ assert.equal(fact(cow,'herbivore'),1);
+ assert.equal(fact(cow,'bird'),0);
+ assert.equal(fact(cow,'spotted'),.5,'cows may be spotted or solid-colored');
+});
+test('farm mammal answers retain cow and exclude wild cheetah',()=>{
+ const g=new Game('animals');
+ for(const [id,answer] of [['mammal','yes'],['farm','yes'],['domesticated','yes'],['herbivore','yes']]){
+  g.question={id,text:id};g.answer(answer);
+ }
+ assert.ok(g.scores().some(x=>x.entry.name==='Cow'));
+ assert.ok(!g.scores().some(x=>x.entry.name==='Cheetah'));
+});
+test('cheetah and elephant remain viable in expanded database',()=>{
+ for(const [name,answers] of [
+  ['Cheetah',[['mammal','yes'],['fast','yes'],['fastestLand','yes'],['spotted','yes'],['africa','yes']]],
+  ['Elephant',[['mammal','yes'],['large','yes'],['africa','yes'],['water','no'],['mane','no'],['wild','yes']]]
+ ]){
+  const g=new Game('animals');
+  for(const [id,answer] of answers){g.question={id,text:id};g.answer(answer)}
+  assert.ok(g.scores().some(x=>x.entry.name===name),name+' eliminated');
+ }
+});
