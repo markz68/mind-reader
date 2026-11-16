@@ -1,4 +1,4 @@
-import {entries,questions} from './data.js?v=0.4.0';
+import {entries,questions} from './data.js?v=0.4.1';
 export const ANSWERS=[['yes','Yes'],['no','No'],['probably','Probably'],['probablyNot','Probably not'],['unknown',"Don't know"]];
 const CATEGORIES={real:'people',fictional:'characters',animal:'animals',place:'places',object:'objects'};
 const EXCLUSIVE_GROUPS=[Object.keys(CATEGORIES),['country','city','landmark'],['uk','france','ireland','usa']];
@@ -28,7 +28,7 @@ function fact(entry,id){
  // Attributes outside that category remain unknown.
  if(CATEGORY_TRAITS[entry.category]?.has(id))return 0;
  if(entry.category==='people'&&['american','british','rock','pop','countryMusic','solo','guitarist','actor','politics','male','female'].includes(id))return 0;
- if(entry.category==='animals'&&['fast','wild','carnivore','africa','asia','ocean','reptile','insect'].includes(id))return 0;
+ if(entry.category==='animals'&&['fast','fastestLand','striped','spotted','mane','wild','carnivore','africa','asia','ocean','reptile','insect'].includes(id))return 0;
  if(entry.category==='objects'&&['instrument','strings','wooden','powered','sportEquipment'].includes(id))return 0;
  if(entry.category==='characters'&&['american','british','male','female','animated','fantasy'].includes(id))return 0;
  return .5; // Other missing information remains unknown.
@@ -116,7 +116,8 @@ export class Game{
   // When no useful questions remain, try candidates rather than ending without a guess.
   if(!this.question||this.history.length>=30)return this.history.length>0;
   const top=ranked[0].probability,runnerUp=ranked[1]?.probability||0;
-  return (this.history.length>=5&&top>=.78&&top-runnerUp>=.45)||(this.history.length>=20&&top>=.38&&top-runnerUp>=.18);
+  // Prefer a useful discriminating question over an early name guess.
+  return (this.history.length>=8&&top>=.92&&top-runnerUp>=.70)||(this.history.length>=20&&top>=.65&&top-runnerUp>=.35);
  }
  guessWrong(){
   const candidate=this.candidate();if(candidate)this.rejected.push(candidate.id);
