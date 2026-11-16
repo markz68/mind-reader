@@ -1,4 +1,4 @@
-import {entries,questions} from './data.js?v=0.5.0';
+import {entries,questions} from './data.js?v=0.5.1';
 export const ANSWERS=[['yes','Yes'],['no','No'],['probably','Probably'],['probablyNot','Probably not'],['unknown',"Don't know"]];
 const CATEGORIES={real:'people',fictional:'characters',animal:'animals',place:'places',object:'objects'};
 const EXCLUSIVE_GROUPS=[Object.keys(CATEGORIES),['country','city','landmark'],['uk','france','ireland','usa']];
@@ -79,6 +79,10 @@ export class Game{
   for(const h of this.history){
    if(h.answer!=='yes'&&h.answer!=='no')continue;
    if(h.id===id)return true;
+   // An explicit answer to a broader trait makes its narrower follow-up redundant.
+   if(id==='fastestLand'&&h.id==='fast'&&h.answer==='no')return true;
+   if(id==='fast'&&h.id==='fastestLand'&&h.answer==='yes')return true;
+   if(id==='farm'&&h.id==='domesticated'&&h.answer==='no')return false;
    if(h.answer==='yes'&&group&&group.includes(h.id))return true;
    if(h.answer==='yes'&&h.id==='europe'&&id==='usa')return true;
    if(h.answer==='yes'&&h.id==='usa'&&id==='europe')return true;
@@ -123,6 +127,9 @@ export class Game{
     if(topFact!==1&&topFact!==0)continue;
     const rivals=ranked.slice(1);
     const opposite=rivals.reduce((s,x)=>s+x.probability*(topFact===1?1-fact(x.entry,q.id):fact(x.entry,q.id)),0);
+    // Only ask a confirmation question if it actually separates the leader
+    // from a plausible rival. Otherwise guess rather than asking filler.
+    if(opposite<.025)continue;
     const score=opposite+(topFact===1?.025:0);
     if(score>confirmScore){confirm=q;confirmScore=score}
    }
@@ -142,7 +149,10 @@ export class Game{
    if(yes+no<.08)continue;
    const probabilityYes=yes+unknown*.5;
    const gain=entropy(probabilityYes)*(yes+no*.9+unknown*.3);
-   if(gain>bestGain+1e-8){best=q;bestGain=gain}
+   // Discourage near-universal questions among the remaining candidates.
+   const separation=Math.min(yes,no)+Math.min(yes+no,1)*Math.min(yes,unknown)*.2;
+   const adjustedGain=gain*(.25+.75*Math.min(1,separation*4));
+   if(adjustedGain>bestGain+1e-8){best=q;bestGain=adjustedGain}
   }
   // If weighted selection found no split, ask an unasked trait that can
   // distinguish any of the remaining candidates before guessing names.
@@ -175,6 +185,10 @@ export class Game{
  shouldGuess(){
   const ranked=this.scores();if(!ranked.length)return false;
   if(this.history.length<4&&this.question)return false;
+  // Distinctive positive facts can justify a guess without a fixed 12-question minimum.
+  const leader=ranked[0];
+  const signature=this.history.filter(h=>h.answer==='yes'&&['fastestLand'].includes(h.id)&&fact(leader.entry,h.id)===1);
+  if(signature.length&&this.history.length>=5&&leader.probability>=.7&&leader.probability-(ranked[1]?.probability||0)>=.45)return true;
   if(this.confirmation&&ranked[0].entry.id===this.confirmation.id){
    const confirmations=this.history.slice(this.confirmation.start).filter(h=>h.answer==='yes'||h.answer==='no'||h.answer==='probably'||h.answer==='probablyNot').length;
    if(confirmations>=1&&ranked[0].probability>=.9&&ranked[0].probability-(ranked[1]?.probability||0)>=.75)return true;
