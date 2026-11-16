@@ -162,3 +162,18 @@ test('animal game keeps asking diagnostic questions before early guesses',()=>{
  assert.equal(g.shouldGuess(),false);
  assert.ok(g.question,'should continue with a distinguishing question');
 });
+
+test('speed and no stripes should not trigger a horse guess',()=>{
+ const g=new Game('animals');
+ g.question={id:'fast',text:'Is the animal known for speed?'};g.answer('yes');
+ g.question={id:'striped',text:'Does it have stripes?'};g.answer('no');
+ assert.ok(g.question,'must ask another distinguishing question');
+ assert.equal(g.shouldGuess(),false,'two broad facts are insufficient to guess');
+});
+test('a cheetah can be distinguished by fastest land animal',()=>{
+ const g=new Game('animals');
+ g.question={id:'fast',text:'Is the animal known for speed?'};g.answer('yes');
+ g.question={id:'striped',text:'Does it have stripes?'};g.answer('no');
+ g.question={id:'fastestLand',text:'Is it the fastest land animal?'};g.answer('yes');
+ assert.equal(g.candidate()?.name,'Cheetah');
+});
