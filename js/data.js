@@ -260,3 +260,36 @@ make("Millipede",'animals','animal invertebrate wild')
 );
 
 questions.push(...[["farm","Is it commonly found on a farm?"],["domesticated","Is it typically domesticated?"],["herbivore","Does it primarily eat plants?"],["omnivore","Does it eat both plants and animals?"],["hooves","Does it have hooves?"],["horns","Does it typically have horns?"],["wool","Is it known for producing wool?"],["antlers","Does it typically have antlers?"],["eggs","Does it lay eggs?"],["fish","Is it a fish?"],["amphibian","Is it an amphibian?"],["arachnid","Is it an arachnid?"],["invertebrate","Is it an invertebrate?"],["insectivore","Does it mainly eat insects?"],["arctic","Is it associated with Arctic regions?"],["desert","Is it adapted to desert environments?"]].map(([id,text])=>({id,text})));
+
+// Category-level taxonomy is exclusive; do not treat an unlisted animal class
+// as unknown when another class is explicitly recorded.
+const animalClasses=['mammal','bird','reptile','insect','fish','amphibian','arachnid','invertebrate'];
+for(const entry of entries.filter(e=>e.category==='animals')){
+ entry.builtIn=true;
+ entry.no=entry.no||[];
+ const known=animalClasses.filter(id=>entry.yes.includes(id));
+ if(known.length===1){
+  for(const id of animalClasses)if(id!==known[0]&&!entry.no.includes(id))entry.no.push(id);
+ }
+ // These are mutually exclusive diet descriptions for the starter knowledge base.
+ const diets=['carnivore','herbivore','omnivore','insectivore'];
+ const diet=entry.yes.find(id=>diets.includes(id));
+ if(diet){
+  for(const id of diets)if(id!==diet&&!entry.no.includes(id))entry.no.push(id);
+ }
+}
+// A few familiar farm animals need explicit distinguishing negatives.
+for(const entry of entries.filter(e=>e.category==='animals')){
+ const exclusions={
+  'Cow':'pet carnivore spotted striped mane fast fastestLand antlers wool eggs',
+  'Bull':'pet carnivore spotted striped mane fast fastestLand antlers wool eggs',
+  'Sheep':'carnivore spotted striped mane fast fastestLand antlers horns',
+  'Goat':'carnivore spotted striped mane fastestLand antlers wool',
+  'Pig':'carnivore spotted striped mane fastestLand antlers wool horns',
+  'Horse':'carnivore spotted striped mane fastestLand antlers horns wool',
+  'Elephant':'farm domesticated hooves horns wool antlers eggs',
+  'Cheetah':'farm domesticated herbivore hooves horns wool antlers eggs',
+  'Giraffe':'farm domesticated carnivore wool antlers eggs'
+ }[entry.name];
+ if(exclusions)for(const id of exclusions.split(' '))if(!entry.yes.includes(id)&&!entry.no.includes(id))entry.no.push(id);
+}
