@@ -526,3 +526,70 @@ test('instrument confirmation stays within instrument details',()=>{
  assert.ok(index>=0);
  for(const h of g.history.slice(index+1))assert.ok(['strings','wooden','electronic'].includes(h.id),h.id);
 });
+
+const goatHistory=[['mammal','yes'],['large','no'],['carnivore','no'],['herbivore','yes'],['pet','no'],['water','no'],['wild','no'],['wool','no'],['farm','yes'],['horns','yes'],['striped','no'],['spotted','yes']];
+test('reported goat history never eliminates goat and excludes hornless equines',()=>{
+ const g=new Game('animals');
+ for(const [id,answer] of goatHistory){
+  g.question={id,text:id};g.answer(answer);
+  assert.ok(g.scores().some(x=>x.entry.name==='Goat'),'Goat excluded at '+id);
+ }
+ for(const name of ['Donkey','Mule'])assert.ok(!g.scores().some(x=>x.entry.name===name));
+ assert.equal(g.shouldGuess(),false,'ask the cattle distinction before guessing Calf');
+ assert.equal(g.question.id,'cattle');
+});
+test('reported goat game identifies goat with relevant follow-ups for coat and horn variants',()=>{
+ for(const horns of ['yes','no'])for(const spotted of ['yes','no']){
+  const g=new Game('animals'),goat=entries.find(e=>e.name==='Goat');
+  for(const [id,answer] of goatHistory){g.question={id,text:id};g.answer(id==='horns'?horns:id==='spotted'?spotted:answer)}
+  const followUps=[];
+  for(let i=0;i<8&&!g.shouldGuess()&&g.question;i++){
+   const q=g.question,value=fact(goat,q.id);followUps.push(q.id);
+   g.answer(value===1?'yes':value===0?'no':'unknown');
+  }
+  assert.equal(g.shouldGuess(),true);assert.equal(g.candidate()?.name,'Goat');
+  for(const id of followUps)assert.ok(['cattle','hooves','horns','wool','tailUp','domesticated','specificallyMale'].includes(id),id);
+ }
+});
+test('goat breed-dependent appearance is unknown at the species level',()=>{
+ const goat=entries.find(e=>e.name==='Goat');
+ for(const id of ['spotted','striped','horns','wool'])assert.equal(fact(goat,id),.5,id);
+ assert.equal(fact(goat,'mammal'),1);assert.equal(fact(goat,'farm'),1);
+ assert.equal(fact(goat,'cattle'),0);
+});
+test('new full goat and sheep games reach the right animal before 20 questions',()=>{
+ for(const name of ['Goat','Sheep']){
+  const target=entries.find(e=>e.name===name),g=new Game('animals');
+  for(let i=0;i<20&&!g.shouldGuess()&&g.question;i++){
+   const value=fact(target,g.question.id);g.answer(value===1?'yes':value===0?'no':'unknown');
+  }
+  assert.equal(g.shouldGuess(),true,name);assert.equal(g.candidate()?.name,name);
+  assert.ok(g.history.length<=20);
+ }
+});
+test('farm mammal branch avoids wild-coat and geographic detours',()=>{
+ const g=new Game('animals');
+ for(const [id,answer] of [['mammal','yes'],['herbivore','yes'],['farm','yes']]){g.question={id,text:id};g.answer(answer)}
+ for(const id of ['spotted','striped','mane','africa','asia','fastestLand'])assert.equal(g.eligible({id}),false,id);
+ assert.ok(g.question);assert.equal(g.eligible(g.question),true);
+});
+test('undo releases farm-topic restrictions when the farm answer is removed',()=>{
+ const g=new Game('animals');g.question={id:'mammal',text:'Mammal?'};g.answer('yes');
+ g.question={id:'farm',text:'Farm?'};g.answer('yes');
+ assert.equal(g.eligible({id:'spotted'}),false);
+ g.undo();assert.equal(g.eligible({id:'spotted'}),true);
+});
+test('learned goat facts override variable traits while other variable facts remain unknown',()=>{
+ const learned={id:'animals-goat',name:'Goat',category:'animals',yes:['spotted'],no:['horns'],aliases:[]};
+ const g=new Game('animals',[learned]),goat=g.pool.find(e=>e.name==='Goat');
+ assert.equal(fact(goat,'spotted'),1);assert.equal(fact(goat,'horns'),0);
+ assert.equal(fact(goat,'wool'),.5);
+ assert.equal(g.pool.filter(e=>e.name==='Goat').length,1);
+});
+test('curated negative facts enrich learned answers unless explicitly overridden',()=>{
+ const learned={id:'animals-donkey',name:'Donkey',category:'animals',yes:['farm'],no:[],aliases:[]};
+ const g=new Game('animals',[learned]),donkey=g.pool.find(e=>e.name==='Donkey');
+ assert.equal(fact(donkey,'horns'),0);
+ const override=new Game('animals',[{...learned,yes:['farm','horns']}]);
+ assert.equal(fact(override.pool.find(e=>e.name==='Donkey'),'horns'),1);
+});

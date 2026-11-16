@@ -2,7 +2,7 @@
 
 An Akinator-style guessing game and installable progressive web app.
 
-## Current version: 0.7.0 prototype
+## Current version: 0.7.1 prototype
 
 Think of a real person, fictional character, animal, place, or object. Choose Quick Play or a category, then answer Yes, No, Probably, Probably not, or Don't know. The game aims for 20 questions and allows up to 30, with a maximum of three incorrect guesses.
 
@@ -27,6 +27,20 @@ The curated database is still limited. It cannot recognize everything, and confi
 - Phone games avoid unrelated transportation, kitchen, sports, size, flight, and material questions. Yes to electricity still suppresses the redundant power question.
 - Expected information gain and fallback selection avoid universal-answer filler.
 - Regression tests check question continuity, uncertain context, undo, indoor transportation, device purpose, and the existing sleigh path.
+
+## v0.7.1 goat and farm-animal correction
+
+- Corrected Goat's false negative for a spotted coat. Coat pattern, horns, and fiber traits can vary; these species-level variable traits accept either answer without excluding Goat.
+- Added explicit horn negatives for Donkey and Mule.
+- Added cattle and usual upright-tail questions. After farm mammal is established, follow-ups stay within farm-animal distinctions rather than unrelated coat/geography details.
+- A pending relevant farm question takes priority over guessing a weakly supported name.
+- Confirmation questions require an explicit opposing fact in a rival, rather than treating missing facts as an opposing answer.
+- Learned answers inherit curated negative facts while explicit learned answers take precedence, including over variable traits. Storage keys and saved records remain unchanged.
+- Regression coverage includes every answer in the reported goat game, coat/horn variants, full goat/sheep games, farm-topic continuity, undo, and learned overrides.
+
+Sources for the new variable goat traits and sheep/goat tail distinction:
+- [Smithsonian National Zoo: Goat](https://nationalzoo.si.edu/animals/goat)
+- [University of Maryland Extension: Sheep and Goats](https://extension.umd.edu/sites/extension.umd.edu/files/2021-02/MD%20Beginning%20Farmer%20-%20Livestock%20Manual.pdf)
 
 ## Question logic
 

@@ -394,3 +394,34 @@ for(const entry of entries.filter(e=>e.category==='objects')){
  for(const id of purpose.yes)if(!entry.yes.includes(id))entry.yes.push(id);
  for(const id of purpose.no)if(!entry.no.includes(id))entry.no.push(id);
 }
+
+
+// v0.7.1 farm-animal corrections.
+// Goat coats, horns, and fiber production vary by breed and husbandry:
+// https://nationalzoo.si.edu/animals/goat
+// A variable trait permits either definite answer; it is not a species-wide exclusion.
+const goat=entries.find(e=>e.name==='Goat');
+goat.variable=['spotted','striped','horns','wool'];
+for(const id of goat.variable){
+ goat.yes=goat.yes.filter(x=>x!==id);
+ goat.no=goat.no.filter(x=>x!==id);
+}
+questions.push({id:'cattle',text:'Is it a type of cattle?'});
+for(const entry of entries.filter(e=>e.category==='animals')){
+ if(['Cow','Bull','Calf'].includes(entry.name)&&!entry.yes.includes('cattle'))entry.yes.push('cattle');
+ if(['Goat','Sheep','Donkey','Mule','Horse','Pig','Llama','Alpaca'].includes(entry.name)){
+  entry.no=entry.no||[];
+  if(!entry.no.includes('cattle'))entry.no.push('cattle');
+ }
+ if(['Donkey','Mule'].includes(entry.name)){
+  entry.no=entry.no||[];
+  if(!entry.no.includes('horns'))entry.no.push('horns');
+ }
+}
+
+
+// Typical tail carriage distinguishes sheep and goats without relying on coat:
+// https://extension.umd.edu/sites/extension.umd.edu/files/2021-02/MD%20Beginning%20Farmer%20-%20Livestock%20Manual.pdf
+questions.push({id:'tailUp',text:'Does it usually hold its tail upright?'});
+goat.yes.push('tailUp');
+entries.find(e=>e.name==='Sheep').no.push('tailUp');

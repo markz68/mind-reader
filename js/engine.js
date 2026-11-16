@@ -1,4 +1,4 @@
-import {entries,questions} from './data.js?v=0.7.0';
+import {entries,questions} from './data.js?v=0.7.1';
 export const ANSWERS=[['yes','Yes'],['no','No'],['probably','Probably'],['probablyNot','Probably not'],['unknown',"Don't know"]];
 const CATEGORIES={real:'people',fictional:'characters',animal:'animals',place:'places',object:'objects'};
 const EXCLUSIVE_GROUPS=[Object.keys(CATEGORIES),['country','city','landmark'],['uk','france','ireland','usa']];
@@ -7,11 +7,11 @@ const REGIONS=new Set(['europe','usa','uk','france','ireland']);
 const CATEGORY_TRAITS={people:new Set(['alive','historical','science','music','sports','royalty','space']),characters:new Set(['superhero','magic','movie','television','book','detective','space','royalty']),animals:new Set(['mammal','bird','water','pet','large','flight']),objects:new Set(['electronic','transport','kitchen','handheld','communication','flight','large'])};
 
 // Narrow details require the broader subject to have been established.
-const ANIMAL_QUESTIONS=new Set('mammal bird pet fast fastestLand striped spotted mane wild carnivore africa reptile insect farm domesticated herbivore omnivore hooves horns wool antlers eggs fish amphibian arachnid invertebrate insectivore arctic desert specificallyMale'.split(' '));
+const ANIMAL_QUESTIONS=new Set('mammal bird pet fast fastestLand striped spotted mane wild carnivore africa reptile insect farm domesticated herbivore omnivore hooves horns wool antlers eggs fish amphibian arachnid invertebrate insectivore arctic desert specificallyMale cattle tailUp'.split(' '));
 const OBJECT_QUESTIONS=new Set('electronic transport kitchen handheld communication instrument strings wooden powered sportEquipment indoors landTravel rails engine twoWheels animalPulled passengers wheels runners phoneCalls mobilePhone touchscreen photography lighting'.split(' '));
 const PERSON_QUESTIONS=new Set('american british male female'.split(' '));
 const MUSIC_QUESTIONS=new Set('rock pop countryMusic solo guitarist'.split(' '));
-const PARENTS={phoneCalls:'communication',mobilePhone:'phoneCalls',touchscreen:'mobilePhone',hooves:'mammal',horns:'mammal',wool:'mammal',antlers:'mammal',mane:'mammal',fastestLand:'fast',rock:'music',pop:'music',countryMusic:'music',solo:'music',guitarist:'music',strings:'instrument',landTravel:'transport',rails:'landTravel',engine:'transport',twoWheels:'wheels',animalPulled:'landTravel',passengers:'transport',wheels:'landTravel',runners:'landTravel'};
+const PARENTS={tailUp:'mammal',cattle:'mammal',phoneCalls:'communication',mobilePhone:'phoneCalls',touchscreen:'mobilePhone',hooves:'mammal',horns:'mammal',wool:'mammal',antlers:'mammal',mane:'mammal',fastestLand:'fast',rock:'music',pop:'music',countryMusic:'music',solo:'music',guitarist:'music',strings:'instrument',landTravel:'transport',rails:'landTravel',engine:'transport',twoWheels:'wheels',animalPulled:'landTravel',passengers:'transport',wheels:'landTravel',runners:'landTravel'};
 
 const LABELS=Object.fromEntries(questions.map(q=>[q.id,q.text]));
 const RESPONSE_PROB={yes:.96,no:.04,probably:.73,probablyNot:.27,unknown:null};
@@ -19,6 +19,7 @@ const entropy=p=>p<=0||p>=1?0:-p*Math.log2(p)-(1-p)*Math.log2(1-p);
 const groupFor=id=>EXCLUSIVE_GROUPS.find(group=>group.includes(id));
 function fact(entry,id){
  if(Object.hasOwn(CATEGORIES,id))return CATEGORIES[id]===entry.category?1:0;
+ if(entry.variable?.includes(id))return .5;
  if(entry.yes.includes(id))return 1;
  if(entry.no?.includes(id))return 0;
  // Personal answers record only confirmed facts. Unanswered traits are unknown.
@@ -55,7 +56,7 @@ function consistent(entry,history){
 }
 export class Game{
  constructor(category=null,learned=[]){
-  this.category=category;this.pool=[...entries.filter(e=>!learned.some(l=>l.id===e.id)),...learned.map(l=>{const builtIn=entries.find(e=>e.id===l.id);if(!builtIn)return l;const yes=[...new Set([...builtIn.yes.filter(x=>!l.no.includes(x)),...l.yes])];return {...l,yes,no:l.no,curated:true}})].filter(e=>!category||e.category===category);
+  this.category=category;this.pool=[...entries.filter(e=>!learned.some(l=>l.id===e.id)),...learned.map(l=>{const builtIn=entries.find(e=>e.id===l.id);if(!builtIn)return l;const yes=[...new Set([...builtIn.yes.filter(x=>!l.no.includes(x)),...l.yes])];const no=[...new Set([...(builtIn.no||[]).filter(x=>!l.yes.includes(x)),...l.no])];return {...l,yes,no,variable:(builtIn.variable||[]).filter(id=>!l.yes.includes(id)&&!l.no.includes(id)),curated:true}})].filter(e=>!category||e.category===category);
   this.history=[];this.rejected=[];this.guesses=0;this.question=null;this.done=false;this.confirmation=null;
   this.next();
  }
@@ -125,6 +126,9 @@ export class Game{
    if((PERSON_QUESTIONS.has(id)||MUSIC_QUESTIONS.has(id))&&!['people','characters'].includes(category))return false;
   }
   if(PARENTS[id]&&this.established(PARENTS[id])!==true)return false;
+  if(category==='animals'&&this.established('farm')===true&&this.established('mammal')===true){
+   if(!['cattle','hooves','horns','wool','tailUp','domesticated','specificallyMale'].includes(id))return false;
+  }
   const objectMode=category==='objects';
   if(objectMode&&id!=='object'){
    const contextual=new Set(['handheld','indoors',...this.objectOptions()]);
@@ -201,6 +205,16 @@ export class Game{
     if(relevant>=.20&&this.history.length>=4){this.question=questions.find(q=>q.id==='specificallyMale');return}
    }
   }
+  // Once farm mammal is established, keep the next distinctions in that family.
+  if(this.established('farm')===true&&this.established('mammal')===true){
+   const farmTraits=['cattle','hooves','horns','wool','tailUp','domesticated'];
+   const next=farmTraits.map(id=>questions.find(q=>q.id===id)).find(q=>{
+    if(!this.eligible(q))return false;
+    const facts=ranked.map(x=>fact(x.entry,q.id));
+    return new Set(facts).size>1&&facts.some(v=>v!==.5);
+   });
+   if(next){this.question=next;this.branchQuestion=true;return}
+  }
   // During confirmation prefer a high-value fact of the leading candidate
   // that has not yet been established, especially one rivals lack.
   if(this.confirmation&&this.history.length-this.confirmation.start<2){
@@ -212,7 +226,7 @@ export class Game{
     const topFact=fact(leader.entry,q.id);
     if(topFact!==1&&topFact!==0)continue;
     const rivals=ranked.slice(1);
-    const opposite=rivals.reduce((s,x)=>s+x.probability*(topFact===1?1-fact(x.entry,q.id):fact(x.entry,q.id)),0);
+    const opposite=rivals.reduce((s,x)=>s+x.probability*(fact(x.entry,q.id)===(topFact===1?0:1)?1:0),0);
     // Only ask a confirmation question if it actually separates the leader
     // from a plausible rival. Otherwise guess rather than asking filler.
     if(opposite<.025)continue;
