@@ -1,4 +1,4 @@
-import {entries,questions} from './data.js?v=0.4.3';
+import {entries,questions} from './data.js?v=0.4.4';
 export const ANSWERS=[['yes','Yes'],['no','No'],['probably','Probably'],['probablyNot','Probably not'],['unknown',"Don't know"]];
 const CATEGORIES={real:'people',fictional:'characters',animal:'animals',place:'places',object:'objects'};
 const EXCLUSIVE_GROUPS=[Object.keys(CATEGORIES),['country','city','landmark'],['uk','france','ireland','usa']];
@@ -44,7 +44,7 @@ function consistent(entry,history){
 }
 export class Game{
  constructor(category=null,learned=[]){
-  this.category=category;this.pool=[...entries.filter(e=>!learned.some(l=>l.id===e.id)),...learned.map(l=>{const builtIn=entries.find(e=>e.id===l.id);if(!builtIn)return l;const yes=[...new Set([...builtIn.yes.filter(x=>!l.no.includes(x)),...l.yes])];return {...l,yes,no:l.no}})].filter(e=>!category||e.category===category);
+  this.category=category;this.pool=[...entries.filter(e=>!learned.some(l=>l.id===e.id)),...learned.map(l=>{const builtIn=entries.find(e=>e.id===l.id);if(!builtIn)return l;const yes=[...new Set([...builtIn.yes.filter(x=>!l.no.includes(x)),...l.yes])];return {...l,yes,no:l.no,curated:true}})].filter(e=>!category||e.category===category);
   this.history=[];this.rejected=[];this.guesses=0;this.question=null;this.done=false;
   this.next();
  }
@@ -53,7 +53,9 @@ export class Game{
   // If no recorded candidate matches all definite answers, retain uncertain
   // candidates for a graceful failure instead of pretending certainty.
   const compatible=available.filter(e=>consistent(e,this.history));
-  const candidates=compatible.length?compatible:available;
+  // Never revive candidates contradicted by definite answers. This was
+  // allowing elephants and giraffes back into a fast, spotted animal game.
+  const candidates=compatible;
   const scored=candidates.map(entry=>{
    let logScore=0;
    for(const {id,answer} of this.history){
@@ -133,7 +135,7 @@ export class Game{
   // When no useful questions remain, try candidates rather than ending without a guess.
   // Never make a name guess from only two broad traits. With no useful
   // questions left, a guess is allowed only after a minimum evidence floor.
-  if(!this.question||this.history.length>=30)return this.history.length>=6;
+  if(!this.question||this.history.length>=30)return this.history.length>=6&&ranked[0].probability>=.5;
   const top=ranked[0].probability,runnerUp=ranked[1]?.probability||0;
   // Prefer a useful discriminating question over an early name guess.
   return (this.history.length>=12&&top>=.97&&top-runnerUp>=.85)||(this.history.length>=20&&top>=.8&&top-runnerUp>=.6);
