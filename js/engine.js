@@ -1,4 +1,4 @@
-import {entries,questions} from './data.js?v=0.4.7';
+import {entries,questions} from './data.js?v=0.5.0';
 export const ANSWERS=[['yes','Yes'],['no','No'],['probably','Probably'],['probablyNot','Probably not'],['unknown',"Don't know"]];
 const CATEGORIES={real:'people',fictional:'characters',animal:'animals',place:'places',object:'objects'};
 const EXCLUSIVE_GROUPS=[Object.keys(CATEGORIES),['country','city','landmark'],['uk','france','ireland','usa']];
@@ -31,7 +31,7 @@ function fact(entry,id){
  // Attributes outside that category remain unknown.
  if(CATEGORY_TRAITS[entry.category]?.has(id))return 0;
  if(entry.category==='people'&&['american','british','rock','pop','countryMusic','solo','guitarist','actor','politics','male','female'].includes(id))return 0;
- if(entry.category==='animals'&&['fast','fastestLand','striped','spotted','mane','wild','carnivore','africa','asia','ocean','reptile','insect'].includes(id))return 0;
+ if(entry.category==='animals'&&['fast','fastestLand','striped','spotted','mane','wild','carnivore','africa','asia','ocean','reptile','insect','farm','domesticated','herbivore','omnivore','hooves','horns','wool','antlers','eggs','fish','amphibian','arachnid','invertebrate','insectivore','arctic','desert'].includes(id))return 0;
  if(entry.category==='objects'&&['instrument','strings','wooden','powered','sportEquipment'].includes(id))return 0;
  if(entry.category==='characters'&&['american','british','male','female','animated','fantasy'].includes(id))return 0;
  return .5; // Other missing information remains unknown.
@@ -107,7 +107,7 @@ export class Game{
   // When all known candidates conflict, continue gathering facts for learning
   // instead of immediately declaring defeat.
   if(!ranked.length){
-   const categoryQuestions={animals:new Set(['mammal','bird','water','pet','large','flight','fast','fastestLand','striped','spotted','mane','wild','carnivore','africa','asia','ocean','reptile','insect']),people:new Set(['alive','historical','science','music','sports','royalty','space','american','british','rock','pop','countryMusic','solo','guitarist','actor','politics','male','female']),characters:new Set(['superhero','magic','movie','television','book','detective','space','royalty','american','british','male','female','animated','fantasy']),places:new Set(['country','city','landmark','europe','usa','uk','france','ireland','asia','fictionalWorld']),objects:new Set(['electronic','transport','kitchen','handheld','communication','flight','large','instrument','strings','wooden','powered','sportEquipment'])};
+   const categoryQuestions={animals:new Set(['mammal','bird','water','pet','large','flight','fast','fastestLand','striped','spotted','mane','wild','carnivore','africa','asia','ocean','reptile','insect','farm','domesticated','herbivore','omnivore','hooves','horns','wool','antlers','eggs','fish','amphibian','arachnid','invertebrate','insectivore','arctic','desert']),people:new Set(['alive','historical','science','music','sports','royalty','space','american','british','rock','pop','countryMusic','solo','guitarist','actor','politics','male','female']),characters:new Set(['superhero','magic','movie','television','book','detective','space','royalty','american','british','male','female','animated','fantasy']),places:new Set(['country','city','landmark','europe','usa','uk','france','ireland','asia','fictionalWorld']),objects:new Set(['electronic','transport','kitchen','handheld','communication','flight','large','instrument','strings','wooden','powered','sportEquipment'])};
    this.question=questions.find(q=>!asked.has(q.id)&&!this.implied(q.id)&&(!this.category||categoryQuestions[this.category]?.has(q.id)))||null;
    return;
   }
@@ -118,7 +118,7 @@ export class Game{
    for(const q of questions){
     if(asked.has(q.id)||this.implied(q.id))continue;
     if(this.category&&Object.hasOwn(CATEGORIES,q.id))continue;
-    if(this.category==='animals'&&!['mammal','bird','water','pet','large','flight','fast','fastestLand','striped','spotted','mane','wild','carnivore','africa','asia','ocean','reptile','insect'].includes(q.id))continue;
+    if(this.category==='animals'&&!['mammal','bird','water','pet','large','flight','fast','fastestLand','striped','spotted','mane','wild','carnivore','africa','asia','ocean','reptile','insect','farm','domesticated','herbivore','omnivore','hooves','horns','wool','antlers','eggs','fish','amphibian','arachnid','invertebrate','insectivore','arctic','desert'].includes(q.id))continue;
     const topFact=fact(leader.entry,q.id);
     if(topFact!==1&&topFact!==0)continue;
     const rivals=ranked.slice(1);
