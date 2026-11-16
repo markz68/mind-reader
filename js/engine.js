@@ -1,4 +1,4 @@
-import {entries,questions} from './data.js?v=0.3.1';
+import {entries,questions} from './data.js?v=0.4.0';
 export const ANSWERS=[['yes','Yes'],['no','No'],['probably','Probably'],['probablyNot','Probably not'],['unknown',"Don't know"]];
 const CATEGORIES={real:'people',fictional:'characters',animal:'animals',place:'places',object:'objects'};
 const EXCLUSIVE_GROUPS=[Object.keys(CATEGORIES),['country','city','landmark'],['uk','france','ireland','usa']];
@@ -13,6 +13,8 @@ function fact(entry,id){
  if(Object.hasOwn(CATEGORIES,id))return CATEGORIES[id]===entry.category?1:0;
  if(entry.yes.includes(id))return 1;
  if(entry.no?.includes(id))return 0;
+ // Personal answers record only confirmed facts. Unanswered traits are unknown.
+ if(Array.isArray(entry.no))return .5;
  if(entry.category==='places'){
   if(PLACE_TYPES.has(id))return entry.yes.some(tag=>PLACE_TYPES.has(tag))?0:.5;
   // The starter place database uses exactly one of these country tags.
@@ -25,6 +27,10 @@ function fact(entry,id){
  // explicitly. This lets questions split characters, animals, and objects.
  // Attributes outside that category remain unknown.
  if(CATEGORY_TRAITS[entry.category]?.has(id))return 0;
+ if(entry.category==='people'&&['american','british','rock','pop','countryMusic','solo','guitarist','actor','politics','male','female'].includes(id))return 0;
+ if(entry.category==='animals'&&['fast','wild','carnivore','africa','asia','ocean','reptile','insect'].includes(id))return 0;
+ if(entry.category==='objects'&&['instrument','strings','wooden','powered','sportEquipment'].includes(id))return 0;
+ if(entry.category==='characters'&&['american','british','male','female','animated','fantasy'].includes(id))return 0;
  return .5; // Other missing information remains unknown.
 }
 function consistent(entry,history){
@@ -38,7 +44,7 @@ function consistent(entry,history){
 }
 export class Game{
  constructor(category=null,learned=[]){
-  this.category=category;this.pool=[...entries,...learned].filter(e=>!category||e.category===category);
+  this.category=category;this.pool=[...entries.filter(e=>!learned.some(l=>l.id===e.id)),...learned].filter(e=>!category||e.category===category);
   this.history=[];this.rejected=[];this.guesses=0;this.question=null;this.done=false;
   this.next();
  }
