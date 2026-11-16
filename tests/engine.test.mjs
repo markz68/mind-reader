@@ -243,3 +243,19 @@ test('cheetah confirmation phase asks a relevant distinguishing question',()=>{
   assert.equal(g.candidate()?.name,'Cheetah');
  }
 });
+
+test('elephant six-answer history does not concede without a guess',()=>{
+ const g=new Game('animals');
+ for(const [id,answer] of [['mammal','yes'],['large','yes'],['africa','yes'],['water','no'],['mane','no'],['wild','yes']]){
+  g.question={id,text:id};g.answer(answer);
+ }
+ assert.ok(g.scores().some(x=>x.entry.name==='Elephant'));
+ assert.ok(g.question||g.shouldGuess(),'must ask or guess, not concede');
+});
+test('animal missing facts remain unknown rather than implicit no',()=>{
+ const elephant=entries.find(x=>x.name==='Elephant');
+ assert.equal(fact(elephant,'spotted'),0);
+ assert.equal(fact(elephant,'reptile'),.5);
+ assert.equal(fact(elephant,'large'),1);
+ assert.equal(fact(entries.find(x=>x.name==='Giraffe'),'spotted'),1);
+});
