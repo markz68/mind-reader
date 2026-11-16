@@ -1,4 +1,4 @@
-import {entries,questions} from './data.js?v=0.4.4';
+import {entries,questions} from './data.js?v=0.4.5';
 export const ANSWERS=[['yes','Yes'],['no','No'],['probably','Probably'],['probablyNot','Probably not'],['unknown',"Don't know"]];
 const CATEGORIES={real:'people',fictional:'characters',animal:'animals',place:'places',object:'objects'};
 const EXCLUSIVE_GROUPS=[Object.keys(CATEGORIES),['country','city','landmark'],['uk','france','ireland','usa']];
@@ -88,8 +88,15 @@ export class Game{
  next(){
   this.question=null;
   if(this.history.length>=30)return;
-  const ranked=this.scores();if(!ranked.length)return;
+  const ranked=this.scores();
   const asked=new Set(this.history.map(h=>h.id));
+  // When all known candidates conflict, continue gathering facts for learning
+  // instead of immediately declaring defeat.
+  if(!ranked.length){
+   const categoryQuestions={animals:new Set(['mammal','bird','water','pet','large','flight','fast','fastestLand','striped','spotted','mane','wild','carnivore','africa','asia','ocean','reptile','insect']),people:new Set(['alive','historical','science','music','sports','royalty','space','american','british','rock','pop','countryMusic','solo','guitarist','actor','politics','male','female']),characters:new Set(['superhero','magic','movie','television','book','detective','space','royalty','american','british','male','female','animated','fantasy']),places:new Set(['country','city','landmark','europe','usa','uk','france','ireland','asia','fictionalWorld']),objects:new Set(['electronic','transport','kitchen','handheld','communication','flight','large','instrument','strings','wooden','powered','sportEquipment'])};
+   this.question=questions.find(q=>!asked.has(q.id)&&!this.implied(q.id)&&(!this.category||categoryQuestions[this.category]?.has(q.id)))||null;
+   return;
+  }
   let best=null,bestGain=0;
   for(const q of questions){
    if(asked.has(q.id)||this.implied(q.id))continue;
@@ -135,7 +142,7 @@ export class Game{
   // When no useful questions remain, try candidates rather than ending without a guess.
   // Never make a name guess from only two broad traits. With no useful
   // questions left, a guess is allowed only after a minimum evidence floor.
-  if(!this.question||this.history.length>=30)return this.history.length>=6&&ranked[0].probability>=.5;
+  if(!this.question||this.history.length>=30)return this.history.length>=3&&ranked[0].probability>=.5;
   const top=ranked[0].probability,runnerUp=ranked[1]?.probability||0;
   // Prefer a useful discriminating question over an early name guess.
   return (this.history.length>=12&&top>=.97&&top-runnerUp>=.85)||(this.history.length>=20&&top>=.8&&top-runnerUp>=.6);
