@@ -293,3 +293,24 @@ test('cheetah and elephant remain viable in expanded database',()=>{
   assert.ok(g.scores().some(x=>x.entry.name===name),name+' eliminated');
  }
 });
+
+test('no to speed suppresses fastest land animal follow-up',()=>{
+ const g=new Game('animals');
+ g.question={id:'fast',text:'Known for speed?'};g.answer('no');
+ assert.equal(g.implied('fastestLand'),true);
+ assert.notEqual(g.question?.id,'fastestLand');
+});
+test('yes to fastest land animal suppresses generic speed follow-up',()=>{
+ const g=new Game('animals');
+ g.question={id:'fastestLand',text:'Fastest land animal?'};g.answer('yes');
+ assert.equal(g.implied('fast'),true);
+ assert.notEqual(g.question?.id,'fast');
+});
+test('elephant history does not ask fastest land animal after no to speed',()=>{
+ const g=new Game('animals');
+ for(const [id,answer] of [['mammal','yes'],['large','yes'],['herbivore','yes'],['hooves','no'],['water','no'],['spotted','no'],['fast','no']]){
+  g.question={id,text:id};g.answer(answer);
+ }
+ assert.notEqual(g.question?.id,'fastestLand');
+ assert.ok(g.scores().some(x=>x.entry.name==='Elephant'));
+});
