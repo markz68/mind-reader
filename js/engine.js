@@ -1,4 +1,4 @@
-import {entries,questions} from './data.js?v=0.5.1';
+import {entries,questions} from './data.js?v=0.5.2';
 export const ANSWERS=[['yes','Yes'],['no','No'],['probably','Probably'],['probablyNot','Probably not'],['unknown',"Don't know"]];
 const CATEGORIES={real:'people',fictional:'characters',animal:'animals',place:'places',object:'objects'};
 const EXCLUSIVE_GROUPS=[Object.keys(CATEGORIES),['country','city','landmark'],['uk','france','ireland','usa']];
@@ -31,7 +31,7 @@ function fact(entry,id){
  // Attributes outside that category remain unknown.
  if(CATEGORY_TRAITS[entry.category]?.has(id))return 0;
  if(entry.category==='people'&&['american','british','rock','pop','countryMusic','solo','guitarist','actor','politics','male','female'].includes(id))return 0;
- if(entry.category==='animals'&&['fast','fastestLand','striped','spotted','mane','wild','carnivore','africa','asia','ocean','reptile','insect','farm','domesticated','herbivore','omnivore','hooves','horns','wool','antlers','eggs','fish','amphibian','arachnid','invertebrate','insectivore','arctic','desert'].includes(id))return 0;
+ if(entry.category==='animals'&&['fast','fastestLand','striped','spotted','mane','wild','carnivore','africa','asia','ocean','reptile','insect','farm','domesticated','herbivore','omnivore','hooves','horns','wool','antlers','eggs','fish','amphibian','arachnid','invertebrate','insectivore','arctic','desert','specificallyMale'].includes(id))return 0;
  if(entry.category==='objects'&&['instrument','strings','wooden','powered','sportEquipment'].includes(id))return 0;
  if(entry.category==='characters'&&['american','british','male','female','animated','fantasy'].includes(id))return 0;
  return .5; // Other missing information remains unknown.
@@ -60,7 +60,8 @@ export class Game{
   // allowing elephants and giraffes back into a fast, spotted animal game.
   const candidates=compatible;
   const scored=candidates.map(entry=>{
-   let logScore=0;
+   // Prefer the common animal name until evidence supports a sex-specific one.
+   let logScore=entry.category==='animals'&&['Bull','Rooster'].includes(entry.name)?Math.log(.22):0;
    for(const {id,answer} of this.history){
     const response=RESPONSE_PROB[answer];if(response===null)continue;
     const likelihood=fact(entry,id);
@@ -113,6 +114,14 @@ export class Game{
    const categoryQuestions={animals:new Set(['mammal','bird','water','pet','large','flight','fast','fastestLand','striped','spotted','mane','wild','carnivore','africa','asia','ocean','reptile','insect','farm','domesticated','herbivore','omnivore','hooves','horns','wool','antlers','eggs','fish','amphibian','arachnid','invertebrate','insectivore','arctic','desert']),people:new Set(['alive','historical','science','music','sports','royalty','space','american','british','rock','pop','countryMusic','solo','guitarist','actor','politics','male','female']),characters:new Set(['superhero','magic','movie','television','book','detective','space','royalty','american','british','male','female','animated','fantasy']),places:new Set(['country','city','landmark','europe','usa','uk','france','ireland','asia','fictionalWorld']),objects:new Set(['electronic','transport','kitchen','handheld','communication','flight','large','instrument','strings','wooden','powered','sportEquipment'])};
    this.question=questions.find(q=>!asked.has(q.id)&&!this.implied(q.id)&&(!this.category||categoryQuestions[this.category]?.has(q.id)))||null;
    return;
+  }
+  // Resolve Cow/Bull (and Chicken/Rooster) using sex, not horns.
+  if(this.category==='animals'&&!asked.has('specificallyMale')){
+   const topNames=new Set(ranked.slice(0,8).map(x=>x.entry.name));
+   if((topNames.has('Cow')&&topNames.has('Bull'))||(topNames.has('Chicken')&&topNames.has('Rooster'))){
+    const relevant=ranked.filter(x=>['Cow','Bull','Chicken','Rooster'].includes(x.entry.name)).reduce((s,x)=>s+x.probability,0);
+    if(relevant>=.28&&this.history.length>=4){this.question=questions.find(q=>q.id==='specificallyMale');return}
+   }
   }
   // During confirmation prefer a high-value fact of the leading candidate
   // that has not yet been established, especially one rivals lack.
