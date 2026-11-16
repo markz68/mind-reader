@@ -102,7 +102,7 @@ entries.push(...additionalEntries);
 // An omitted trait is otherwise unknown, not automatically false.
 const animalNo={
  'Elephant':'water mane spotted striped fast fastestLand carnivore pet',
- 'Giraffe':'water mane spotted striped fast fastestLand carnivore pet',
+ 'Giraffe':'water mane striped fast fastestLand carnivore pet',
  'Lion':'water spotted striped fast fastestLand pet',
  'Cheetah':'large water mane striped pet',
  'Tiger':'water mane spotted fastestLand pet',
@@ -114,5 +114,6 @@ const animalNo={
  'Hippopotamus':'mane spotted striped carnivore pet'
 };
 for(const entry of entries){
+ if(entry.name==='Giraffe'&&!entry.yes.includes('spotted'))entry.yes.push('spotted');
  if(entry.category==='animals')entry.no=(animalNo[entry.name]||'').split(' ').filter(Boolean);
 }
