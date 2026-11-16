@@ -1,6 +1,6 @@
-import {getLearned,saveLearned,deleteLearned,replaceLearned} from './storage.js?v=0.5.1';
-import {entries,questions} from './data.js?v=0.5.1';
-import {Game,ANSWERS} from './engine.js?v=0.5.1';
+import {getLearned,saveLearned,deleteLearned,replaceLearned} from './storage.js?v=0.5.2';
+import {entries,questions} from './data.js?v=0.5.2';
+import {Game,ANSWERS} from './engine.js?v=0.5.2';
 const $=id=>document.getElementById(id);let game=null;let learned=[];let current='home';let stats=load();function load(){try{return JSON.parse(localStorage.getItem('mind-reader-stats'))||{wins:0,losses:0,abandoned:0,games:[]}}catch{return {wins:0,losses:0,abandoned:0,games:[]}}}function save(){localStorage.setItem('mind-reader-stats',JSON.stringify(stats))}
 function show(id){current=id;for(const el of ['home','game','result','settings','learn'])$(el).classList.toggle('hidden',el!==id)}
 function start(category=null){game=new Game(category,learned);game.rejectedNames=[];show('game');render()}
