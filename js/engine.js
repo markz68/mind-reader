@@ -44,7 +44,7 @@ function consistent(entry,history){
 }
 export class Game{
  constructor(category=null,learned=[]){
-  this.category=category;this.pool=[...entries.filter(e=>!learned.some(l=>l.id===e.id)),...learned].filter(e=>!category||e.category===category);
+  this.category=category;this.pool=[...entries.filter(e=>!learned.some(l=>l.id===e.id)),...learned.map(l=>{const builtIn=entries.find(e=>e.id===l.id);if(!builtIn)return l;const yes=[...new Set([...builtIn.yes.filter(x=>!l.no.includes(x)),...l.yes])];return {...l,yes,no:l.no}})].filter(e=>!category||e.category===category);
   this.history=[];this.rejected=[];this.guesses=0;this.question=null;this.done=false;
   this.next();
  }
