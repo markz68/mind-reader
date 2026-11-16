@@ -115,6 +115,7 @@ export class Game{
    for(const q of questions){
     if(asked.has(q.id)||this.implied(q.id))continue;
     if(this.category&&Object.hasOwn(CATEGORIES,q.id))continue;
+    if(this.category==='animals'&&!['mammal','bird','water','pet','large','flight','fast','fastestLand','striped','spotted','mane','wild','carnivore','africa','asia','ocean','reptile','insect'].includes(q.id))continue;
     const topFact=fact(leader.entry,q.id);
     if(topFact!==1&&topFact!==0)continue;
     const rivals=ranked.slice(1);
