@@ -1,6 +1,6 @@
-import {getLearned,saveLearned,deleteLearned,replaceLearned} from './storage.js?v=0.5.0';
-import {entries,questions} from './data.js?v=0.5.0';
-import {Game,ANSWERS} from './engine.js?v=0.5.0';
+import {getLearned,saveLearned,deleteLearned,replaceLearned} from './storage.js?v=0.5.1';
+import {entries,questions} from './data.js?v=0.5.1';
+import {Game,ANSWERS} from './engine.js?v=0.5.1';
 const $=id=>document.getElementById(id);let game=null;let learned=[];let current='home';let stats=load();function load(){try{return JSON.parse(localStorage.getItem('mind-reader-stats'))||{wins:0,losses:0,abandoned:0,games:[]}}catch{return {wins:0,losses:0,abandoned:0,games:[]}}}function save(){localStorage.setItem('mind-reader-stats',JSON.stringify(stats))}
 function show(id){current=id;for(const el of ['home','game','result','settings','learn'])$(el).classList.toggle('hidden',el!==id)}
 function start(category=null){game=new Game(category,learned);game.rejectedNames=[];show('game');render()}
@@ -74,7 +74,7 @@ $('learnCancel').onclick=()=>show(game?.done?'result':'settings');
 getLearned().then(items=>{learned=items;renderSettings()}).catch(err=>{$('databaseCount').textContent='Learning storage unavailable';console.warn(err)});
 
 function renderResultHistory(){const target=$('resultHistoryList');target.replaceChildren();for(const h of game.historyLines()){const item=document.createElement('li');item.textContent=h.question+' — '+h.answer;target.append(item)}$('resultGuesses').textContent=game.rejectedNames?.length?'Incorrect guesses: '+game.rejectedNames.join(', '):'No incorrect guesses';$('resultHistory').open=false}
-function renderHistory(){const target=$('history');if(!target)return;target.replaceChildren();for(const h of game.historyLines()){const item=document.createElement('li');item.textContent=h.number+'. '+h.question+' — '+h.answer;target.append(item)}}
+function renderHistory(){const target=$('history');if(!target)return;target.replaceChildren();for(const h of game.historyLines()){const item=document.createElement('li');item.textContent=h.question+' — '+h.answer;target.append(item)}}
 $('quick').onclick=()=>start();$('categoryPlay').onclick=()=>start($('category').value);$('undo').onclick=()=>{game.undo();render()};$('restart').onclick=()=>{if(game&&!game.done&&game.history.length){stats.abandoned++;save()}start(game?.category||null)};$('newGame').onclick=()=>{game=null;show('home')};$('settingsBtn').onclick=()=>{if(current==='game'&&game&&!game.done){if(!confirm('Leave the current game?'))return;stats.abandoned++;save()}renderSettings();show('settings')};$('back').onclick=()=>show('home');$('export').onclick=()=>{const blob=new Blob([JSON.stringify({schema:2,stats,learned},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='mind-reader-backup.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
 $('import').onchange=async event=>{try{
  const parsed=JSON.parse(await event.target.files[0].text());
