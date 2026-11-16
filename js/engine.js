@@ -1,4 +1,4 @@
-import {entries,questions} from './data.js?v=0.4.2';
+import {entries,questions} from './data.js?v=0.4.3';
 export const ANSWERS=[['yes','Yes'],['no','No'],['probably','Probably'],['probablyNot','Probably not'],['unknown',"Don't know"]];
 const CATEGORIES={real:'people',fictional:'characters',animal:'animals',place:'places',object:'objects'};
 const EXCLUSIVE_GROUPS=[Object.keys(CATEGORIES),['country','city','landmark'],['uk','france','ireland','usa']];
@@ -104,6 +104,20 @@ export class Game{
    const gain=entropy(probabilityYes)*(yes+no*.9+unknown*.3);
    if(gain>bestGain+1e-8){best=q;bestGain=gain}
   }
+  // If weighted selection found no split, ask an unasked trait that can
+  // distinguish any of the remaining candidates before guessing names.
+  if(!best&&this.history.length<12){
+   const top=ranked.slice(0,Math.min(12,ranked.length));
+   let fallback=-1;
+   for(const q of questions){
+    if(asked.has(q.id)||this.implied(q.id))continue;
+    if(this.category&&Object.hasOwn(CATEGORIES,q.id))continue;
+    const yes=top.filter(x=>fact(x.entry,q.id)===1).length;
+    const no=top.filter(x=>fact(x.entry,q.id)===0).length;
+    const score=Math.min(yes,no)*3+yes+no;
+    if(yes>0&&score>fallback){fallback=score;best=q}
+   }
+  }
   this.question=best;
  }
  answer(a){
@@ -117,10 +131,12 @@ export class Game{
   const ranked=this.scores();if(!ranked.length)return false;
   if(this.history.length<3&&this.question)return false;
   // When no useful questions remain, try candidates rather than ending without a guess.
-  if(!this.question||this.history.length>=30)return this.history.length>0;
+  // Never make a name guess from only two broad traits. With no useful
+  // questions left, a guess is allowed only after a minimum evidence floor.
+  if(!this.question||this.history.length>=30)return this.history.length>=6;
   const top=ranked[0].probability,runnerUp=ranked[1]?.probability||0;
   // Prefer a useful discriminating question over an early name guess.
-  return (this.history.length>=10&&top>=.96&&top-runnerUp>=.82)||(this.history.length>=20&&top>=.75&&top-runnerUp>=.55);
+  return (this.history.length>=12&&top>=.97&&top-runnerUp>=.85)||(this.history.length>=20&&top>=.8&&top-runnerUp>=.6);
  }
  guessWrong(){
   const candidate=this.candidate();if(candidate)this.rejected.push(candidate.id);
