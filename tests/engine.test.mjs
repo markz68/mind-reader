@@ -225,3 +225,21 @@ test('exhausted candidate pool continues collecting facts',()=>{
  assert.equal(g.candidate(),null);
  assert.ok(g.question,'should continue asking instead of ending after two conflicting facts');
 });
+
+test('animal category begins with mammal classification',()=>{
+ const g=new Game('animals');
+ assert.equal(g.question?.id,'mammal');
+});
+test('cheetah confirmation phase asks a relevant distinguishing question',()=>{
+ const g=new Game('animals');
+ for(const [id,answer] of [['mammal','yes'],['carnivore','yes'],['pet','no'],['fast','yes'],['fastestLand','yes']]){
+  g.question={id,text:id};g.answer(answer);
+ }
+ assert.equal(g.candidate()?.name,'Cheetah');
+ assert.ok(g.shouldGuess()||g.question,'should confirm or guess rather than end');
+ if(g.question){
+  assert.notEqual(g.question.id,'fastestLand');
+  const q=g.question;g.answer(fact(g.pool.find(e=>e.name==='Cheetah'),q.id)===1?'yes':'no');
+  assert.equal(g.candidate()?.name,'Cheetah');
+ }
+});
