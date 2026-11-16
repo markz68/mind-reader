@@ -189,3 +189,22 @@ test('lion is not tagged as an animal especially known for speed',()=>{
  assert.equal(fact(entries.find(e=>e.name==='Lion'),'fast'),0);
  assert.equal(fact(entries.find(e=>e.name==='Cheetah'),'fast'),1);
 });
+
+test('Africa cannot resurrect elephant and giraffe after fast and spots',()=>{
+ const g=new Game('animals');
+ for(const [id,answer] of [['fast','yes'],['striped','no'],['spotted','yes'],['mane','no'],['africa','yes']]){
+  g.question={id,text:id};g.answer(answer);
+ }
+ const ranked=g.scores().map(x=>x.entry.name);
+ assert.equal(ranked[0],'Cheetah');
+ assert.ok(!ranked.includes('Elephant'));
+ assert.ok(!ranked.includes('Giraffe'));
+ assert.ok(!ranked.includes('Lion'));
+});
+test('contradictory evidence never restores excluded candidates',()=>{
+ const g=new Game('animals');
+ g.question={id:'spotted',text:'Spotted?'};g.answer('yes');
+ g.question={id:'instrument',text:'Instrument?'};g.answer('yes');
+ assert.equal(g.scores().length,0);
+ assert.equal(g.candidate(),null);
+});
