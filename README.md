@@ -2,11 +2,20 @@
 
 An Akinator-style guessing game and installable progressive web app.
 
-## Current version: 0.6.0 prototype
+## Current version: 0.6.1 prototype
 
 Think of a real person, fictional character, animal, place, or object. Choose Quick Play or a category, then answer Yes, No, Probably, Probably not, or Don't know. The game aims for 20 questions and allows up to 30, with a maximum of three incorrect guesses.
 
 The curated database is still limited. It cannot recognize everything, and confidence represents the remaining recorded candidates rather than certainty about every possible answer.
+
+## v0.6.1 telephone correction
+
+- Added Telephone (landline/home/desk phone aliases), plus phone-call, mobile-phone, and touchscreen distinctions.
+- Fixed missing power facts that previously excluded Smartphone when answering Yes to needing a power source.
+- Unrecorded object power requirements stay unknown. Known electrical and engine-driven objects have explicit power facts.
+- Communication and other purpose questions precede device guesses when they can separate candidates.
+- A Yes to electricity suppresses the redundant power-source question.
+- Added regression coverage for the reported 12-answer telephone history, full phone games, power facts, dependencies, undo, and learned overrides. The sleigh/carriage regression remains in the suite.
 
 ## Question logic
 
@@ -26,7 +35,7 @@ The curated database is still limited. It cannot recognize everything, and confi
 - Guided teaching after a missed answer, with review and confirmation before saving.
 - Learned answers are stored in this browser's IndexedDB; statistics are stored in localStorage.
 - Settings provides learned-answer editing/removal and JSON export/import. Schema 2 backups include statistics and learned answers; legacy statistics backups are accepted.
-- Existing data and storage keys are preserved in v0.6.0. Data stays on this device/browser unless exported. There is no cloud synchronization or AI backend.
+- Existing data and storage keys are preserved in v0.6.1. Data stays on this device/browser unless exported. There is no cloud synchronization or AI backend.
 
 ## Running and installing
 
@@ -34,7 +43,7 @@ Serve the repository root over HTTP for development. GitHub Pages can serve the 
 
 On Android or desktop, open the site in a compatible browser and use Install app or Add to Home screen when offered. On iPad, open it in Safari and use Share > Add to Home Screen.
 
-After the first successful online load, the service worker caches the app for offline use. Reopen online to receive updates. v0.6.0 refreshes versioned module URLs and the app cache without clearing saved statistics or learned answers. Browser installation, offline behavior, and device layout still require device acceptance testing.
+After the first successful online load, the service worker caches the app for offline use. Reopen online to receive updates. v0.6.1 refreshes versioned module URLs and the app cache without clearing saved statistics or learned answers. Browser installation, offline behavior, and device layout still require device acceptance testing.
 
 ## Validation
 

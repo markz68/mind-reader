@@ -348,3 +348,30 @@ for(const entry of entries.filter(e=>e.category==='objects')){
   if(entry.yes.includes('landTravel'))for(const id of ['water','flight'])if(!entry.no.includes(id))entry.no.push(id);
  }else if(!entry.yes.includes('indoors'))entry.yes.push('indoors');
 }
+
+
+// v0.6.1: electrical devices need power, including line-powered telephones.
+questions.push(...[
+ ['phoneCalls','Is making and receiving phone calls one of its main built-in functions?'],
+ ['mobilePhone','Is it specifically a mobile or cellular phone?'],
+ ['touchscreen','Does it normally have a touchscreen?']
+].map(([id,text])=>({id,text})));
+entries.push(make('Telephone','objects','object electronic powered handheld communication indoors phoneCalls',['Landline telephone','Home phone','Desk phone']));
+const telephone=entries.find(e=>e.name==='Telephone');
+telephone.builtIn=true;
+telephone.no='transport kitchen instrument large flight wooden sportEquipment mobilePhone touchscreen'.split(' ');
+const smartphone=entries.find(e=>e.name==='Smartphone');
+for(const id of ['phoneCalls','mobilePhone','touchscreen'])if(!smartphone.yes.includes(id))smartphone.yes.push(id);
+for(const entry of entries.filter(e=>e.category==='objects')){
+ if(entry.yes.includes('electronic')||entry.yes.includes('engine')){
+  if(!entry.yes.includes('powered'))entry.yes.push('powered');
+  if(entry.no)entry.no=entry.no.filter(id=>id!=='powered');
+ }
+}
+// Record known nonpowered examples explicitly; other missing power facts are unknown.
+for(const entry of entries.filter(e=>e.category==='objects')){
+ if(['Coffee mug','Hammer','Guitar','Piano','Violin','Drum','Trumpet','Football','Basketball','Tennis racket','Bicycle','Sleigh','Horse-drawn carriage','Wagon','Sled','Skateboard','Wheelbarrow'].includes(entry.name)){
+  entry.no=entry.no||[];
+  if(!entry.no.includes('powered'))entry.no.push('powered');
+ }
+}

@@ -399,3 +399,65 @@ test('unknown learned transport mechanics stay unknown',()=>{
  assert.equal(fact(learned,'wheels'),.5);
  assert.equal(fact(learned,'engine'),.5);
 });
+
+test('telephone screenshot answers retain both phone types through the power question',()=>{
+ const g=new Game('objects');
+ const answers=[['handheld','yes'],['indoors','yes'],['transport','no'],['instrument','no'],['electronic','yes'],['powered','yes'],['large','no'],['kitchen','no'],['communication','yes'],['flight','no'],['wooden','no'],['sportEquipment','no']];
+ for(const [id,answer] of answers){
+  g.question={id,text:id};g.answer(answer);
+  const names=g.scores().map(x=>x.entry.name);
+  assert.ok(names.includes('Telephone'),'Telephone lost at '+id);
+  assert.ok(names.includes('Smartphone'),'Smartphone lost at '+id);
+ }
+ const names=g.scores().map(x=>x.entry.name);
+ assert.ok(!names.includes('Camera'));assert.ok(!names.includes('Flashlight'));
+});
+test('all explicitly electrical objects and engine-driven vehicles have power facts',()=>{
+ for(const e of entries.filter(e=>e.category==='objects'&&(e.yes.includes('electronic')||e.yes.includes('engine'))))assert.equal(fact(e,'powered'),1,e.name);
+ const unrecorded={id:'objects-unknown-power',name:'Unknown power',category:'objects',yes:['object']};
+ assert.equal(fact(unrecorded,'powered'),.5);
+});
+test('telephone and smartphone full games ask communication before the first guess',()=>{
+ for(const name of ['Telephone','Smartphone']){
+  const g=new Game('objects'),target=entries.find(e=>e.name===name);
+  for(let i=0;i<20&&!g.shouldGuess()&&g.question;i++){
+   const q=g.question,value=fact(target,q.id);
+   g.answer(value===1?'yes':value===0?'no':'unknown');
+  }
+  assert.equal(g.shouldGuess(),true,name);
+  assert.equal(g.candidate()?.name,name);
+  assert.ok(g.history.some(h=>h.id==='communication'&&h.answer==='yes'));
+  assert.ok(!g.history.some(h=>h.id==='powered'),'electricity already establishes power');
+ }
+});
+test('phone follow-ups require communication and phone-call facts',()=>{
+ const g=new Game('objects');
+ assert.equal(g.eligible({id:'phoneCalls'}),false);
+ assert.equal(g.eligible({id:'mobilePhone'}),false);
+ g.question={id:'communication',text:'Communication?'};g.answer('yes');
+ assert.equal(g.eligible({id:'phoneCalls'}),true);
+ assert.equal(g.eligible({id:'mobilePhone'}),false);
+ g.question={id:'phoneCalls',text:'Calls?'};g.answer('yes');
+ assert.equal(g.eligible({id:'mobilePhone'}),true);
+});
+test('no to mobile phone separates a landline from smartphone',()=>{
+ const g=new Game('objects');
+ for(const [id,answer] of [['handheld','yes'],['indoors','yes'],['transport','no'],['electronic','yes'],['communication','yes'],['phoneCalls','yes'],['mobilePhone','no']]){
+  g.question={id,text:id};g.answer(answer);
+ }
+ assert.equal(g.candidate()?.name,'Telephone');
+ assert.ok(!g.scores().some(x=>x.entry.name==='Smartphone'));
+});
+test('electrical power inference suppresses redundant questions but undo restores them',()=>{
+ const g=new Game('objects');g.question={id:'electronic',text:'Electricity?'};g.answer('yes');
+ assert.equal(g.implied('powered'),true);
+ g.undo();assert.equal(g.implied('powered'),false);
+});
+test('learned phone overrides retain explicit user facts and unknown power remains unknown',()=>{
+ const learned={id:'objects-smartphone',name:'Smartphone',category:'objects',yes:['communication'],no:['touchscreen'],aliases:[]};
+ const g=new Game('objects',[learned]),phone=g.pool.find(e=>e.id===learned.id);
+ assert.equal(fact(phone,'powered'),1);assert.equal(fact(phone,'touchscreen'),0);
+ assert.equal(g.pool.filter(e=>e.id===learned.id).length,1);
+ const custom={id:'objects-custom-phone',name:'Custom phone',category:'objects',yes:['communication'],no:[]};
+ assert.equal(fact(custom,'powered'),.5);
+});

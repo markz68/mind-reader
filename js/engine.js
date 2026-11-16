@@ -1,4 +1,4 @@
-import {entries,questions} from './data.js?v=0.6.0';
+import {entries,questions} from './data.js?v=0.6.1';
 export const ANSWERS=[['yes','Yes'],['no','No'],['probably','Probably'],['probablyNot','Probably not'],['unknown',"Don't know"]];
 const CATEGORIES={real:'people',fictional:'characters',animal:'animals',place:'places',object:'objects'};
 const EXCLUSIVE_GROUPS=[Object.keys(CATEGORIES),['country','city','landmark'],['uk','france','ireland','usa']];
@@ -8,10 +8,10 @@ const CATEGORY_TRAITS={people:new Set(['alive','historical','science','music','s
 
 // Narrow details require the broader subject to have been established.
 const ANIMAL_QUESTIONS=new Set('mammal bird pet fast fastestLand striped spotted mane wild carnivore africa reptile insect farm domesticated herbivore omnivore hooves horns wool antlers eggs fish amphibian arachnid invertebrate insectivore arctic desert specificallyMale'.split(' '));
-const OBJECT_QUESTIONS=new Set('electronic transport kitchen handheld communication instrument strings wooden powered sportEquipment indoors landTravel rails engine twoWheels animalPulled passengers wheels runners'.split(' '));
+const OBJECT_QUESTIONS=new Set('electronic transport kitchen handheld communication instrument strings wooden powered sportEquipment indoors landTravel rails engine twoWheels animalPulled passengers wheels runners phoneCalls mobilePhone touchscreen'.split(' '));
 const PERSON_QUESTIONS=new Set('american british male female'.split(' '));
 const MUSIC_QUESTIONS=new Set('rock pop countryMusic solo guitarist'.split(' '));
-const PARENTS={hooves:'mammal',horns:'mammal',wool:'mammal',antlers:'mammal',mane:'mammal',fastestLand:'fast',rock:'music',pop:'music',countryMusic:'music',solo:'music',guitarist:'music',strings:'instrument',landTravel:'transport',rails:'landTravel',engine:'transport',twoWheels:'wheels',animalPulled:'landTravel',passengers:'transport',wheels:'landTravel',runners:'landTravel'};
+const PARENTS={phoneCalls:'communication',mobilePhone:'phoneCalls',touchscreen:'communication',hooves:'mammal',horns:'mammal',wool:'mammal',antlers:'mammal',mane:'mammal',fastestLand:'fast',rock:'music',pop:'music',countryMusic:'music',solo:'music',guitarist:'music',strings:'instrument',landTravel:'transport',rails:'landTravel',engine:'transport',twoWheels:'wheels',animalPulled:'landTravel',passengers:'transport',wheels:'landTravel',runners:'landTravel'};
 
 const LABELS=Object.fromEntries(questions.map(q=>[q.id,q.text]));
 const RESPONSE_PROB={yes:.96,no:.04,probably:.73,probablyNot:.27,unknown:null};
@@ -40,7 +40,7 @@ function fact(entry,id){
  if(CATEGORY_TRAITS[entry.category]?.has(id))return 0;
  if(entry.category==='people'&&['american','british','rock','pop','countryMusic','solo','guitarist','actor','politics','male','female'].includes(id))return 0;
  if(entry.category==='animals'&&['fast','fastestLand','striped','spotted','mane','wild','carnivore','africa','asia','ocean','reptile','insect','farm','domesticated','herbivore','omnivore','hooves','horns','wool','antlers','eggs','fish','amphibian','arachnid','invertebrate','insectivore','arctic','desert','specificallyMale'].includes(id))return 0;
- if(entry.category==='objects'&&['instrument','strings','wooden','powered','sportEquipment'].includes(id))return 0;
+ if(entry.category==='objects'&&['instrument','strings','wooden','sportEquipment'].includes(id))return 0;
  if(entry.category==='characters'&&['american','british','male','female','animated','fantasy'].includes(id))return 0;
  return .5; // Other missing information remains unknown.
 }
@@ -105,6 +105,7 @@ export class Game{
  implied(id){
   const parent=PARENTS[id];
   if(parent&&this.established(parent)===false)return true;
+  if(id==='powered'&&this.established('electronic')===true)return true;
   const group=groupFor(id);
   for(const h of this.history){
    if(h.answer!=='yes'&&h.answer!=='no')continue;
@@ -135,6 +136,12 @@ export class Game{
    const broad=['handheld','indoors','transport'];
    const nextBroad=broad.find(id=>!asked.has(id)&&!this.implied(id));
    if(nextBroad){this.question=questions.find(q=>q.id===nextBroad);return}
+   // Establish function before guessing from shape or materials.
+   if(this.established('transport')===false){
+    const functions=['electronic','communication','phoneCalls','mobilePhone','instrument','kitchen'];
+    const nextFunction=functions.map(id=>questions.find(q=>q.id===id)).find(q=>this.eligible(q)&&ranked.some(x=>fact(x.entry,q.id)===1)&&ranked.some(x=>fact(x.entry,q.id)!==1));
+    if(nextFunction){this.question=nextFunction;return}
+   }
    if(this.established('transport')===true){
     const branch=['landTravel','rails','engine','animalPulled','passengers','wheels','twoWheels','runners'];
     const nextBranch=branch.map(id=>questions.find(q=>q.id===id)).find(q=>this.eligible(q)&&ranked.some(x=>fact(x.entry,q.id)===1)&&ranked.some(x=>fact(x.entry,q.id)!==1));
@@ -234,6 +241,8 @@ export class Game{
  shouldGuess(){
   const ranked=this.scores();if(!ranked.length)return false;
   if(this.history.length<4&&this.question)return false;
+  // Ask a selected purpose/phone distinction before committing to a device.
+  if(this.question&&['electronic','communication','phoneCalls','mobilePhone'].includes(this.question.id)&&this.eligible(this.question))return false;
   // Distinctive positive facts can justify a guess without a fixed 12-question minimum.
   const leader=ranked[0];
   const signature=this.history.filter(h=>h.answer==='yes'&&['fastestLand'].includes(h.id)&&fact(leader.entry,h.id)===1);
