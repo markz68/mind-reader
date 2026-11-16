@@ -97,3 +97,22 @@ make("Homer Simpson","characters","fictional television animated american male")
 const refinements={"Taylor Swift":"american pop solo female","Elvis Presley":"american rock solo male guitarist","Michael Jordan":"american male","Serena Williams":"american female","Albert Einstein":"male","Marie Curie":"female","Isaac Newton":"british male","Neil Armstrong":"american male","Queen Elizabeth II":"british female","Sherlock Holmes":"british male","Batman":"american male","Superman":"american male","Harry Potter":"british male fantasy","Hermione Granger":"british female fantasy","Spider-Man":"american male","Elsa":"female animated fantasy","Mickey Mouse":"male animated","Lion":"africa wild carnivore mane","Elephant":"africa wild","Shark":"wild carnivore ocean","Dolphin":"wild ocean","Eagle":"wild carnivore","Penguin":"wild ocean","Dog":"carnivore","Cat":"carnivore","Horse":"fast","Hammer":"wooden"};
 for(const entry of entries){const traits=refinements[entry.name];if(traits)entry.yes.push(...traits.split(' '))}
 entries.push(...additionalEntries);
+
+// Explicit negative facts are reserved for well-established distinctions.
+// An omitted trait is otherwise unknown, not automatically false.
+const animalNo={
+ 'Elephant':'water mane spotted striped fast fastestLand carnivore pet',
+ 'Giraffe':'water mane spotted striped fast fastestLand carnivore pet',
+ 'Lion':'water spotted striped fast fastestLand pet',
+ 'Cheetah':'large water mane striped pet',
+ 'Tiger':'water mane spotted fastestLand pet',
+ 'Leopard':'water mane striped fastestLand pet',
+ 'Zebra':'water mane spotted carnivore pet',
+ 'Horse':'water mane spotted striped carnivore fastestLand',
+ 'Rhinoceros':'water mane spotted striped carnivore pet',
+ 'Gorilla':'water mane spotted striped carnivore pet',
+ 'Hippopotamus':'mane spotted striped carnivore pet'
+};
+for(const entry of entries){
+ if(entry.category==='animals')entry.no=(animalNo[entry.name]||'').split(' ').filter(Boolean);
+}
