@@ -2,7 +2,7 @@
 
 An Akinator-style guessing game and installable progressive web app.
 
-## Current version: 0.6.1 prototype
+## Current version: 0.7.0 prototype
 
 Think of a real person, fictional character, animal, place, or object. Choose Quick Play or a category, then answer Yes, No, Probably, Probably not, or Don't know. The game aims for 20 questions and allows up to 30, with a maximum of three incorrect guesses.
 
@@ -17,9 +17,20 @@ The curated database is still limited. It cannot recognize everything, and confi
 - A Yes to electricity suppresses the redundant power-source question.
 - Added regression coverage for the reported 12-answer telephone history, full phone games, power facts, dependencies, undo, and learned overrides. The sleigh/carriage regression remains in the suite.
 
+## v0.7.0 branching progression
+
+- Replaces the fixed handheld/indoors/transport checklist with context-sensitive object branches.
+- Handheld indoor objects move toward electricity and purpose. Outdoor objects that cannot be held in one hand move toward transportation.
+- Positive purpose answers keep later questions within that branch: communication to phone calls to mobile/cellular phone; instruments to strings/material; transportation to travel mechanics.
+- Context guides question order without silently converting assumptions into candidate facts. An indoor object can still be transportation.
+- Electronics can be distinguished by communication, photography, and lighting purposes. Camera and Flashlight now have explicit distinguishing facts.
+- Phone games avoid unrelated transportation, kitchen, sports, size, flight, and material questions. Yes to electricity still suppresses the redundant power question.
+- Expected information gain and fallback selection avoid universal-answer filler.
+- Regression tests check question continuity, uncertain context, undo, indoor transportation, device purpose, and the existing sleigh path.
+
 ## Question logic
 
-- Broad object questions establish size, indoor use, and transportation before transport mechanics.
+- Broad object questions establish whether it is handheld and typically indoors, then follow a supported purpose branch before asking specific details.
 - Transport questions distinguish land travel, rails, engines, animal pulling, passengers, wheels, and runners.
 - A sleigh and horse-drawn carriage remain plausible until a distinguishing answer separates them.
 - Narrow follow-ups require an established broader trait. No to wheels suppresses the two-wheel question; music genres wait for music; mammal anatomy waits for mammal classification.
@@ -35,7 +46,7 @@ The curated database is still limited. It cannot recognize everything, and confi
 - Guided teaching after a missed answer, with review and confirmation before saving.
 - Learned answers are stored in this browser's IndexedDB; statistics are stored in localStorage.
 - Settings provides learned-answer editing/removal and JSON export/import. Schema 2 backups include statistics and learned answers; legacy statistics backups are accepted.
-- Existing data and storage keys are preserved in v0.6.1. Data stays on this device/browser unless exported. There is no cloud synchronization or AI backend.
+- Existing data and storage keys are preserved in v0.7.0. Data stays on this device/browser unless exported. There is no cloud synchronization or AI backend.
 
 ## Running and installing
 
@@ -43,7 +54,7 @@ Serve the repository root over HTTP for development. GitHub Pages can serve the 
 
 On Android or desktop, open the site in a compatible browser and use Install app or Add to Home screen when offered. On iPad, open it in Safari and use Share > Add to Home Screen.
 
-After the first successful online load, the service worker caches the app for offline use. Reopen online to receive updates. v0.6.1 refreshes versioned module URLs and the app cache without clearing saved statistics or learned answers. Browser installation, offline behavior, and device layout still require device acceptance testing.
+After the first successful online load, the service worker caches the app for offline use. Reopen online to receive updates. v0.7.0 refreshes versioned module URLs and the app cache without clearing saved statistics or learned answers. Browser installation, offline behavior, and device layout still require device acceptance testing.
 
 ## Validation
 

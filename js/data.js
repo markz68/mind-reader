@@ -375,3 +375,22 @@ for(const entry of entries.filter(e=>e.category==='objects')){
   if(!entry.no.includes('powered'))entry.no.push('powered');
  }
 }
+
+
+// v0.7.0: electronic devices branch by purpose before shape or material.
+questions.push(
+ {id:'photography',text:'Is it designed to take photographs?'},
+ {id:'lighting',text:'Is its main purpose to provide light?'}
+);
+for(const entry of entries.filter(e=>e.category==='objects')){
+ const purpose={
+  Camera:{yes:['photography'],no:['lighting','phoneCalls']},
+  Flashlight:{yes:['lighting'],no:['photography','phoneCalls']},
+  Smartphone:{yes:['photography'],no:['lighting']},
+  Telephone:{yes:[],no:['photography','lighting']}
+ }[entry.name];
+ if(!purpose)continue;
+ entry.no=entry.no||[];
+ for(const id of purpose.yes)if(!entry.yes.includes(id))entry.yes.push(id);
+ for(const id of purpose.no)if(!entry.no.includes(id))entry.no.push(id);
+}

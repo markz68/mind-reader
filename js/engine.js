@@ -1,4 +1,4 @@
-import {entries,questions} from './data.js?v=0.6.1';
+import {entries,questions} from './data.js?v=0.7.0';
 export const ANSWERS=[['yes','Yes'],['no','No'],['probably','Probably'],['probablyNot','Probably not'],['unknown',"Don't know"]];
 const CATEGORIES={real:'people',fictional:'characters',animal:'animals',place:'places',object:'objects'};
 const EXCLUSIVE_GROUPS=[Object.keys(CATEGORIES),['country','city','landmark'],['uk','france','ireland','usa']];
@@ -8,10 +8,10 @@ const CATEGORY_TRAITS={people:new Set(['alive','historical','science','music','s
 
 // Narrow details require the broader subject to have been established.
 const ANIMAL_QUESTIONS=new Set('mammal bird pet fast fastestLand striped spotted mane wild carnivore africa reptile insect farm domesticated herbivore omnivore hooves horns wool antlers eggs fish amphibian arachnid invertebrate insectivore arctic desert specificallyMale'.split(' '));
-const OBJECT_QUESTIONS=new Set('electronic transport kitchen handheld communication instrument strings wooden powered sportEquipment indoors landTravel rails engine twoWheels animalPulled passengers wheels runners phoneCalls mobilePhone touchscreen'.split(' '));
+const OBJECT_QUESTIONS=new Set('electronic transport kitchen handheld communication instrument strings wooden powered sportEquipment indoors landTravel rails engine twoWheels animalPulled passengers wheels runners phoneCalls mobilePhone touchscreen photography lighting'.split(' '));
 const PERSON_QUESTIONS=new Set('american british male female'.split(' '));
 const MUSIC_QUESTIONS=new Set('rock pop countryMusic solo guitarist'.split(' '));
-const PARENTS={phoneCalls:'communication',mobilePhone:'phoneCalls',touchscreen:'communication',hooves:'mammal',horns:'mammal',wool:'mammal',antlers:'mammal',mane:'mammal',fastestLand:'fast',rock:'music',pop:'music',countryMusic:'music',solo:'music',guitarist:'music',strings:'instrument',landTravel:'transport',rails:'landTravel',engine:'transport',twoWheels:'wheels',animalPulled:'landTravel',passengers:'transport',wheels:'landTravel',runners:'landTravel'};
+const PARENTS={phoneCalls:'communication',mobilePhone:'phoneCalls',touchscreen:'mobilePhone',hooves:'mammal',horns:'mammal',wool:'mammal',antlers:'mammal',mane:'mammal',fastestLand:'fast',rock:'music',pop:'music',countryMusic:'music',solo:'music',guitarist:'music',strings:'instrument',landTravel:'transport',rails:'landTravel',engine:'transport',twoWheels:'wheels',animalPulled:'landTravel',passengers:'transport',wheels:'landTravel',runners:'landTravel'};
 
 const LABELS=Object.fromEntries(questions.map(q=>[q.id,q.text]));
 const RESPONSE_PROB={yes:.96,no:.04,probably:.73,probablyNot:.27,unknown:null};
@@ -83,6 +83,31 @@ export class Game{
   const denominator=scored.reduce((sum,x)=>sum+Math.exp(x.logScore-maximum),0);
   return scored.map(x=>({entry:x.entry,score:x.logScore,probability:Math.exp(x.logScore-maximum)/denominator})).sort((a,b)=>b.probability-a.probability);
  }
+ objectTopic(){
+  // Most specific established purpose wins. Context alone never establishes a purpose.
+  return ['phoneCalls','communication','transport','instrument','kitchen','photography','lighting','sportEquipment','electronic'].find(id=>this.established(id)===true)||null;
+ }
+ objectOptions(){
+  const topic=this.objectTopic();
+  const branches={
+   phoneCalls:['mobilePhone','touchscreen'],
+   communication:['phoneCalls'],
+   transport:['landTravel','rails','engine','animalPulled','passengers','wheels','twoWheels','runners','water','flight'],
+   instrument:['strings','wooden','electronic'],
+   kitchen:['electronic','powered','wooden'],
+   photography:[],
+   lighting:[],
+   sportEquipment:[],
+   electronic:['communication','photography','lighting','kitchen']
+  };
+  if(topic)return branches[topic];
+  if(this.established('indoors')===false){
+   return this.established('handheld')===false?
+    ['transport','electronic','sportEquipment','instrument','kitchen','communication']:
+    ['sportEquipment','electronic','transport','instrument','kitchen','communication'];
+  }
+  return ['electronic','instrument','kitchen','communication','sportEquipment','transport'];
+ }
  established(id){
   const explicit=[...this.history].reverse().find(h=>h.id===id&&['yes','no'].includes(h.answer));
   if(explicit)return explicit.answer==='yes';
@@ -100,6 +125,11 @@ export class Game{
    if((PERSON_QUESTIONS.has(id)||MUSIC_QUESTIONS.has(id))&&!['people','characters'].includes(category))return false;
   }
   if(PARENTS[id]&&this.established(PARENTS[id])!==true)return false;
+  const objectMode=category==='objects';
+  if(objectMode&&id!=='object'){
+   const contextual=new Set(['handheld','indoors',...this.objectOptions()]);
+   if(!contextual.has(id))return false;
+  }
   return true;
  }
  implied(id){
@@ -123,30 +153,30 @@ export class Game{
   return false;
  }
  next(){
-  this.question=null;
+  this.question=null;this.branchQuestion=false;
   if(this.history.length>=30)return;
   const ranked=this.scores();
   const asked=new Set(this.history.map(h=>h.id));
   if(!this.history.length&&this.category==='animals'){
    this.question=questions.find(q=>q.id==='mammal');return;
   }
-  // Establish the broad object type before specialized details.
+  // Follow the supported object branch instead of completing a global checklist.
   const objectMode=this.category==='objects'||this.established('object')===true;
   if(objectMode){
-   const broad=['handheld','indoors','transport'];
-   const nextBroad=broad.find(id=>!asked.has(id)&&!this.implied(id));
-   if(nextBroad){this.question=questions.find(q=>q.id===nextBroad);return}
-   // Establish function before guessing from shape or materials.
-   if(this.established('transport')===false){
-    const functions=['electronic','communication','phoneCalls','mobilePhone','instrument','kitchen'];
-    const nextFunction=functions.map(id=>questions.find(q=>q.id===id)).find(q=>this.eligible(q)&&ranked.some(x=>fact(x.entry,q.id)===1)&&ranked.some(x=>fact(x.entry,q.id)!==1));
-    if(nextFunction){this.question=nextFunction;return}
-   }
-   if(this.established('transport')===true){
-    const branch=['landTravel','rails','engine','animalPulled','passengers','wheels','twoWheels','runners'];
-    const nextBranch=branch.map(id=>questions.find(q=>q.id===id)).find(q=>this.eligible(q)&&ranked.some(x=>fact(x.entry,q.id)===1)&&ranked.some(x=>fact(x.entry,q.id)!==1));
-    if(nextBranch){this.question=nextBranch;return}
-   }
+   const opening=['handheld','indoors'].find(id=>!asked.has(id));
+   if(opening){this.question=questions.find(q=>q.id===opening);return}
+   const topic=this.objectTopic();
+   const options=this.objectOptions();
+   const purposeful=new Set(['phoneCalls','mobilePhone','touchscreen']);
+   const next=options.map(id=>questions.find(q=>q.id===id)).find(q=>{
+    if(!q||!this.eligible(q))return false;
+    const knownPositive=ranked.some(x=>fact(x.entry,q.id)===1);
+    const divides=ranked.some(x=>fact(x.entry,q.id)!==1);
+    // A specific phone follow-up can confirm the supported purpose even
+    // when the small database has no rival left with a different answer.
+    return knownPositive&&(divides||!topic||purposeful.has(q.id));
+   });
+   if(next){this.question=next;this.branchQuestion=true;return}
   }
   // Start a short confirmation phase once one candidate clearly leads.
   // Reset it when later answers change the leader.
@@ -199,12 +229,11 @@ export class Game{
    const yes=ranked.reduce((s,x)=>s+(fact(x.entry,q.id)===1?x.probability:0),0);
    const no=ranked.reduce((s,x)=>s+(fact(x.entry,q.id)===0?x.probability:0),0);
    const unknown=Math.max(0,1-yes-no);
-   // Unknown facts are not negative evidence, but can still justify a question.
-   // Prioritize questions that divide the remaining candidates, including
-   // known-vs-unknown splits. Avoid questions with almost no informative facts.
+   // Expected information gain subtracts uncertainty from missing facts.
+   // Universal known answers offer no information and should not create filler.
    if(yes+no<.08)continue;
    const probabilityYes=yes+unknown*.5;
-   const gain=entropy(probabilityYes)*(yes+no*.9+unknown*.3);
+   const gain=Math.max(0,entropy(probabilityYes)-unknown);
    // Discourage near-universal questions among the remaining candidates.
    const separation=Math.min(yes,no)+Math.min(yes+no,1)*Math.min(yes,unknown)*.2;
    const adjustedGain=gain*(.25+.75*Math.min(1,separation*4));
@@ -221,13 +250,13 @@ export class Game{
     const yes=top.filter(x=>fact(x.entry,q.id)===1).length;
     const no=top.filter(x=>fact(x.entry,q.id)===0).length;
     const score=Math.min(yes,no)*3+yes+no;
-    if(yes>0&&score>fallback){fallback=score;best=q}
+    if(yes>0&&yes<top.length&&score>fallback){fallback=score;best=q}
    }
   }
   // Never concede while an informative, unasked question remains.
   if(!best){
    const pool=ranked.slice(0,Math.min(8,ranked.length));
-   best=questions.find(q=>this.eligible(q)&&(!this.category||!Object.hasOwn(CATEGORIES,q.id))&&pool.some(x=>fact(x.entry,q.id)===1))||null;
+   best=questions.find(q=>this.eligible(q)&&(!this.category||!Object.hasOwn(CATEGORIES,q.id))&&pool.some(x=>fact(x.entry,q.id)===1)&&pool.some(x=>fact(x.entry,q.id)!==1))||null;
   }
   this.question=best;
  }
@@ -241,8 +270,8 @@ export class Game{
  shouldGuess(){
   const ranked=this.scores();if(!ranked.length)return false;
   if(this.history.length<4&&this.question)return false;
-  // Ask a selected purpose/phone distinction before committing to a device.
-  if(this.question&&['electronic','communication','phoneCalls','mobilePhone'].includes(this.question.id)&&this.eligible(this.question))return false;
+  // Complete the selected branch question before guessing a name.
+  if(this.branchQuestion&&this.question)return false;
   // Distinctive positive facts can justify a guess without a fixed 12-question minimum.
   const leader=ranked[0];
   const signature=this.history.filter(h=>h.answer==='yes'&&['fastestLand'].includes(h.id)&&fact(leader.entry,h.id)===1);

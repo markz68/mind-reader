@@ -461,3 +461,68 @@ test('learned phone overrides retain explicit user facts and unknown power remai
  const custom={id:'objects-custom-phone',name:'Custom phone',category:'objects',yes:['communication'],no:[]};
  assert.equal(fact(custom,'powered'),.5);
 });
+
+test('handheld indoor object continues toward electricity rather than transportation',()=>{
+ const g=new Game('objects');
+ assert.equal(g.question.id,'handheld');g.answer('yes');
+ assert.equal(g.question.id,'indoors');g.answer('yes');
+ assert.equal(g.question.id,'electronic');
+});
+test('outdoor nonhandheld object continues toward transportation',()=>{
+ const g=new Game('objects');g.answer('no');g.answer('no');
+ assert.equal(g.question.id,'transport');
+});
+test('phone games stay on purpose and phone details without unrelated questions',()=>{
+ for(const name of ['Telephone','Smartphone']){
+  const g=new Game('objects'),target=entries.find(e=>e.name===name),path=[];
+  for(let i=0;i<20&&!g.shouldGuess()&&g.question;i++){
+   const q=g.question,value=fact(target,q.id);path.push(q.id);
+   g.answer(value===1?'yes':value===0?'no':'unknown');
+  }
+  assert.equal(g.candidate()?.name,name);assert.equal(g.shouldGuess(),true);
+  for(const id of ['transport','kitchen','sportEquipment','wooden','large','flight','instrument','powered'])assert.ok(!path.includes(id),name+' asked '+id);
+  for(const id of ['electronic','communication','phoneCalls','mobilePhone'])assert.ok(path.includes(id),name+' omitted '+id);
+  assert.ok(path.indexOf('communication')<path.indexOf('phoneCalls'));
+  assert.ok(path.indexOf('phoneCalls')<path.indexOf('mobilePhone'));
+ }
+});
+test('indoor context does not falsely rule out transportation',()=>{
+ const learned={id:'objects-indoor-cart',name:'Indoor cart',category:'objects',yes:['object','handheld','indoors','transport'],no:['electronic','instrument','kitchen','communication','sportEquipment'],aliases:[]};
+ const g=new Game('objects',[learned]);
+ for(const answer of ['yes','yes','no'])g.answer(answer);
+ assert.ok(g.scores().some(x=>x.entry.id===learned.id));
+ for(let i=0;i<10&&g.question&&g.question.id!=='transport';i++)g.answer('no');
+ assert.equal(g.question?.id,'transport');
+});
+test('unknown indoor answer keeps broad purpose questions available',()=>{
+ const g=new Game('objects');g.answer('yes');g.answer('unknown');
+ assert.ok(g.question);assert.ok(['electronic','instrument','kitchen','communication','sportEquipment','transport'].includes(g.question.id));
+ assert.equal(g.established('indoors'),null);
+});
+test('undo reopens the appropriate context branch',()=>{
+ const g=new Game('objects');g.answer('yes');g.answer('yes');
+ assert.equal(g.question.id,'electronic');
+ g.undo();assert.equal(g.question.id,'indoors');
+ g.answer('no');assert.notEqual(g.question.id,'phoneCalls');
+ assert.equal(g.history.length,2);
+});
+test('camera and flashlight separate by purpose without transportation questions',()=>{
+ for(const name of ['Camera','Flashlight']){
+  const target=entries.find(e=>e.name===name),g=new Game('objects');
+  for(let i=0;i<20&&!g.shouldGuess()&&g.question;i++){
+   const value=fact(target,g.question.id);g.answer(value===1?'yes':value===0?'no':'unknown');
+  }
+  assert.equal(g.candidate()?.name,name);assert.equal(g.shouldGuess(),true);
+  assert.ok(g.history.some(h=>h.id==='photography'));
+  assert.ok(!g.history.some(h=>h.id==='transport'));
+ }
+});
+test('instrument confirmation stays within instrument details',()=>{
+ const target=entries.find(e=>e.name==='Guitar'),g=new Game('objects');
+ for(let i=0;i<20&&!g.shouldGuess()&&g.question;i++){
+  const value=fact(target,g.question.id);g.answer(value===1?'yes':value===0?'no':'unknown');
+ }
+ const index=g.history.findIndex(h=>h.id==='instrument'&&h.answer==='yes');
+ assert.ok(index>=0);
+ for(const h of g.history.slice(index+1))assert.ok(['strings','wooden','electronic'].includes(h.id),h.id);
+});
