@@ -314,3 +314,22 @@ test('elephant history does not ask fastest land animal after no to speed',()=>{
  assert.notEqual(g.question?.id,'fastestLand');
  assert.ok(g.scores().some(x=>x.entry.name==='Elephant'));
 });
+
+test('horns alone do not make bull a better answer than cow',()=>{
+ const g=new Game('animals');
+ for(const [id,answer] of [['mammal','yes'],['large','yes'],['herbivore','yes'],['hooves','yes'],['domesticated','yes'],['farm','yes'],['horns','yes']]){
+  g.question={id,text:id};g.answer(answer);
+ }
+ const ranked=g.scores().map(x=>x.entry.name);
+ assert.ok(ranked.includes('Cow'),'cow must remain possible with horns');
+ assert.ok(ranked.indexOf('Cow')<ranked.indexOf('Bull'),'generic cow should outrank bull before sex is confirmed');
+ assert.equal(g.question?.id,'specificallyMale');
+});
+test('explicit male answer can favor bull over cow',()=>{
+ const g=new Game('animals');
+ for(const [id,answer] of [['mammal','yes'],['large','yes'],['herbivore','yes'],['hooves','yes'],['domesticated','yes'],['farm','yes'],['horns','yes'],['specificallyMale','yes']]){
+  g.question={id,text:id};g.answer(answer);
+ }
+ assert.ok(g.scores().some(x=>x.entry.name==='Bull'));
+ assert.ok(!g.scores().some(x=>x.entry.name==='Cow'));
+});
