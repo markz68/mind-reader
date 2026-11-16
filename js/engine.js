@@ -1,4 +1,4 @@
-import {entries,questions} from './data.js?v=0.4.5';
+import {entries,questions} from './data.js?v=0.4.6';
 export const ANSWERS=[['yes','Yes'],['no','No'],['probably','Probably'],['probablyNot','Probably not'],['unknown',"Don't know"]];
 const CATEGORIES={real:'people',fictional:'characters',animal:'animals',place:'places',object:'objects'};
 const EXCLUSIVE_GROUPS=[Object.keys(CATEGORIES),['country','city','landmark'],['uk','france','ireland','usa']];
@@ -45,7 +45,7 @@ function consistent(entry,history){
 export class Game{
  constructor(category=null,learned=[]){
   this.category=category;this.pool=[...entries.filter(e=>!learned.some(l=>l.id===e.id)),...learned.map(l=>{const builtIn=entries.find(e=>e.id===l.id);if(!builtIn)return l;const yes=[...new Set([...builtIn.yes.filter(x=>!l.no.includes(x)),...l.yes])];return {...l,yes,no:l.no,curated:true}})].filter(e=>!category||e.category===category);
-  this.history=[];this.rejected=[];this.guesses=0;this.question=null;this.done=false;
+  this.history=[];this.rejected=[];this.guesses=0;this.question=null;this.done=false;this.confirmation=null;
   this.next();
  }
  scores(){
@@ -90,12 +90,39 @@ export class Game{
   if(this.history.length>=30)return;
   const ranked=this.scores();
   const asked=new Set(this.history.map(h=>h.id));
+  if(!this.history.length&&this.category==='animals'){
+   this.question=questions.find(q=>q.id==='mammal');return;
+  }
+  // Start a short confirmation phase once one candidate clearly leads.
+  // Reset it when later answers change the leader.
+  const leader=ranked[0];
+  const margin=(leader?.probability||0)-(ranked[1]?.probability||0);
+  const ready=this.history.filter(h=>h.answer!=='unknown').length>=4&&leader&&leader.probability>=.78&&margin>=.55;
+  if(!ready||this.confirmation?.id!==leader.entry.id){
+   this.confirmation=ready?{id:leader.entry.id,start:this.history.length}:null;
+  }
   // When all known candidates conflict, continue gathering facts for learning
   // instead of immediately declaring defeat.
   if(!ranked.length){
    const categoryQuestions={animals:new Set(['mammal','bird','water','pet','large','flight','fast','fastestLand','striped','spotted','mane','wild','carnivore','africa','asia','ocean','reptile','insect']),people:new Set(['alive','historical','science','music','sports','royalty','space','american','british','rock','pop','countryMusic','solo','guitarist','actor','politics','male','female']),characters:new Set(['superhero','magic','movie','television','book','detective','space','royalty','american','british','male','female','animated','fantasy']),places:new Set(['country','city','landmark','europe','usa','uk','france','ireland','asia','fictionalWorld']),objects:new Set(['electronic','transport','kitchen','handheld','communication','flight','large','instrument','strings','wooden','powered','sportEquipment'])};
    this.question=questions.find(q=>!asked.has(q.id)&&!this.implied(q.id)&&(!this.category||categoryQuestions[this.category]?.has(q.id)))||null;
    return;
+  }
+  // During confirmation prefer a high-value fact of the leading candidate
+  // that has not yet been established, especially one rivals lack.
+  if(this.confirmation&&this.history.length-this.confirmation.start<2){
+   let confirm=null,confirmScore=-1;
+   for(const q of questions){
+    if(asked.has(q.id)||this.implied(q.id))continue;
+    if(this.category&&Object.hasOwn(CATEGORIES,q.id))continue;
+    const topFact=fact(leader.entry,q.id);
+    if(topFact!==1&&topFact!==0)continue;
+    const rivals=ranked.slice(1);
+    const opposite=rivals.reduce((s,x)=>s+x.probability*(topFact===1?1-fact(x.entry,q.id):fact(x.entry,q.id)),0);
+    const score=opposite+(topFact===1?.025:0);
+    if(score>confirmScore){confirm=q;confirmScore=score}
+   }
+   if(confirm){this.question=confirm;return}
   }
   let best=null,bestGain=0;
   for(const q of questions){
@@ -138,11 +165,16 @@ export class Game{
  candidate(){return this.scores()[0]?.entry||null}
  shouldGuess(){
   const ranked=this.scores();if(!ranked.length)return false;
-  if(this.history.length<3&&this.question)return false;
+  if(this.history.length<4&&this.question)return false;
+  if(this.confirmation&&ranked[0].entry.id===this.confirmation.id){
+   const confirmations=this.history.slice(this.confirmation.start).filter(h=>h.answer==='yes'||h.answer==='no'||h.answer==='probably'||h.answer==='probablyNot').length;
+   if(confirmations>=1&&ranked[0].probability>=.9&&ranked[0].probability-(ranked[1]?.probability||0)>=.75)return true;
+   if(confirmations>=2&&ranked[0].probability>=.78&&ranked[0].probability-(ranked[1]?.probability||0)>=.55)return true;
+  }
   // When no useful questions remain, try candidates rather than ending without a guess.
   // Never make a name guess from only two broad traits. With no useful
   // questions left, a guess is allowed only after a minimum evidence floor.
-  if(!this.question||this.history.length>=30)return this.history.length>=3&&ranked[0].probability>=.5;
+  if(!this.question||this.history.length>=30)return this.history.length>=4&&ranked[0].probability>=.5;
   const top=ranked[0].probability,runnerUp=ranked[1]?.probability||0;
   // Prefer a useful discriminating question over an early name guess.
   return (this.history.length>=12&&top>=.97&&top-runnerUp>=.85)||(this.history.length>=20&&top>=.8&&top-runnerUp>=.6);
