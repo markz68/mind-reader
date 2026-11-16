@@ -119,17 +119,27 @@ test('learning validation rejects contradictory facts',async()=>{
  assert.equal(validEntry({id:'animals-cheetah',name:'Cheetah',category:'animals',yes:['mammal'],no:['pet']}),true);
 });
 
-test('learned musician is guessed when no distinguishing questions remain',()=>{
- const springsteen={id:'people-bruce-springsteen',name:'Bruce Springsteen',category:'people',yes:['alive','music'],no:[],aliases:[]};
- const g=new Game('people',[springsteen]);
- g.question={id:'alive',text:'Is it alive today?'};g.answer('yes');
+
+test('expanded knowledge includes musician, instrument, and fast animal',()=>{
+ assert.ok(entries.length>=120);
+ for(const name of ['Bruce Springsteen','Guitar','Cheetah'])assert.ok(entries.some(e=>e.name===name));
+ assert.equal(fact(entries.find(e=>e.name==='Bruce Springsteen'),'rock'),1);
+ assert.equal(fact(entries.find(e=>e.name==='Guitar'),'instrument'),1);
+});
+test('learned facts override built-in facts without duplicate candidates',()=>{
+ const learned={id:'people-bruce-springsteen',name:'Bruce Springsteen',category:'people',yes:['alive','music'],no:[],aliases:[]};
+ const g=new Game('people',[learned]);
+ assert.equal(g.pool.filter(e=>e.name==='Bruce Springsteen').length,1);
+ assert.equal(fact(g.pool.find(e=>e.name==='Bruce Springsteen'),'rock'),1);
+ assert.equal(fact(g.pool.find(e=>e.name==='Bruce Springsteen'),'music'),1);
+});
+test('learned unrecorded traits remain unknown',()=>{
+ const learned={id:'people-sample',name:'Sample',category:'people',yes:['music'],no:[],aliases:[]};
+ assert.equal(fact(learned,'rock'),.5);
+});
+test('question selection can distinguish musicians by genre',()=>{
+ const g=new Game('people');
  g.question={id:'music',text:'Is it associated with music?'};g.answer('yes');
- g.question=null;
- assert.equal(g.shouldGuess(),true);
- let found=false;
- for(let i=0;i<3;i++){
-  if(g.candidate()?.name==='Bruce Springsteen'){found=true;break}
-  g.guessWrong();
- }
- assert.equal(found,true,'Bruce Springsteen should be among the three guesses');
+ const eligible=['rock','pop','countryMusic','american','british','guitarist','solo','male','female'];
+ assert.ok(g.question&&eligible.includes(g.question.id),'expected a useful musician trait, got '+g.question?.id);
 });
