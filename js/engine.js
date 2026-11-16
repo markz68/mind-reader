@@ -107,7 +107,8 @@ export class Game{
  shouldGuess(){
   const ranked=this.scores();if(!ranked.length)return false;
   if(this.history.length<3&&this.question)return false;
-  if(!this.question||this.history.length>=30)return ranked[0].probability>=.5&&this.history.length>=3;
+  // When no useful questions remain, try candidates rather than ending without a guess.
+  if(!this.question||this.history.length>=30)return this.history.length>0;
   const top=ranked[0].probability,runnerUp=ranked[1]?.probability||0;
   return (this.history.length>=5&&top>=.78&&top-runnerUp>=.45)||(this.history.length>=20&&top>=.38&&top-runnerUp>=.18);
  }
