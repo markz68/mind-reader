@@ -2,7 +2,7 @@
 
 An Akinator-style, local-first guessing game built as a progressive web app.
 
-## Current status: v0.3.0 prototype
+## Current status: v0.3.1 prototype
 
 The first playable prototype has been committed to the `main` branch. It is **not yet v1.0**.
 
@@ -33,23 +33,27 @@ This prototype uses a small hand-authored dataset and probability-weighted scori
 ### Planned release
 Version 1.0.0 after learning, persistence, accuracy benchmarks, accessibility review, and offline/update tests are complete.
 
-## v0.3.0 place-logic fix
+## v0.3.1 place-logic fix
 - Explicit country and place-type exclusions prevent incompatible follow-up questions.
 - London and Paris can now be distinguished by United Kingdom and France questions.
 - Regression coverage for a European-city answer path.
 - The knowledge set is still small; the engine may not recognize places outside it.
 
-## v0.3.0 category-play correction
+## v0.3.1 category-play correction
 - Fixes immediate name guessing in fictional characters by making category-specific trait negatives explicit for the curated starter data.
 - Adds tests for first-question behavior across all five categories and three unanswered fictional-character questions.
 
-## v0.3.0 asset refresh fix
+## v0.3.1 asset refresh fix
 - Versioned module imports for app, engine and data to avoid loading old engine code with a newer HTML title.
 - Network-first asset fetching with offline cache fallback, preserving local statistics.
 
-## v0.3.0 guided learning
+## v0.3.1 guided learning
 - Confirmation-required teaching with Yes, No and Unknown traits
 - Local IndexedDB learned answers, editable and removable in Settings
 - JSON schema 2 backup includes statistics and learned answers; legacy statistics backup import supported
 - Database count and cautious guessing when evidence is weak
 - The curated built-in dataset remains 46 entries; expansion toward 1,000 is a separate validation task
+
+## v0.3.1
+- When questions run out, make candidate guesses rather than immediately ending the game due to low confidence.
+- Regression test for a learned Bruce Springsteen answer.
