@@ -255,7 +255,7 @@ test('elephant six-answer history does not concede without a guess',()=>{
 test('animal missing facts remain unknown rather than implicit no',()=>{
  const elephant=entries.find(x=>x.name==='Elephant');
  assert.equal(fact(elephant,'spotted'),0);
- assert.equal(fact(elephant,'reptile'),.5);
+ assert.equal(fact(elephant,'reptile'),0,'known mammal excludes reptile taxonomy');
  assert.equal(fact(elephant,'large'),1);
  assert.equal(fact(entries.find(x=>x.name==='Giraffe'),'spotted'),1);
 });
@@ -332,4 +332,70 @@ test('explicit male answer can favor bull over cow',()=>{
  }
  assert.ok(g.scores().some(x=>x.entry.name==='Bull'));
  assert.ok(!g.scores().some(x=>x.entry.name==='Cow'));
+});
+
+test('sleigh game narrows by broad type and transport mechanics before guessing',()=>{
+ const g=new Game('objects');
+ const target=entries.find(e=>e.name==='Sleigh');
+ const path=[];
+ for(let i=0;i<20&&!g.shouldGuess();i++){
+  assert.ok(g.question,'must keep asking useful questions');
+  const q=g.question;path.push(q.id);
+  const value=fact(target,q.id);
+  g.answer(value===1?'yes':value===0?'no':'unknown');
+ }
+ assert.equal(g.candidate()?.name,'Sleigh');
+ assert.equal(g.shouldGuess(),true);
+ for(const id of ['transport','landTravel','rails','engine','animalPulled','passengers','wheels'])assert.ok(path.includes(id),id);
+ assert.ok(path.indexOf('transport')<path.indexOf('animalPulled'));
+ assert.ok(path.indexOf('animalPulled')<path.indexOf('wheels'));
+});
+test('carriage remains possible until wheels distinguish it from sleigh',()=>{
+ const g=new Game('objects');
+ for(const [id,answer] of [['transport','yes'],['landTravel','yes'],['rails','no'],['engine','no'],['animalPulled','yes'],['passengers','yes']]){
+  g.question={id,text:id};g.answer(answer);
+ }
+ let names=g.scores().map(x=>x.entry.name);
+ assert.ok(names.includes('Sleigh'));assert.ok(names.includes('Horse-drawn carriage'));
+ g.question={id:'wheels',text:'Wheels?'};g.answer('no');
+ names=g.scores().map(x=>x.entry.name);
+ assert.ok(names.includes('Sleigh'));assert.ok(!names.includes('Horse-drawn carriage'));
+ assert.ok(!names.includes('Bicycle'));
+});
+test('transport details require an established transport branch',()=>{
+ const g=new Game('objects');
+ for(const id of ['landTravel','rails','engine','animalPulled','passengers','wheels','twoWheels','runners'])assert.equal(g.eligible({id}),false,id);
+ g.question={id:'transport',text:'Transport?'};g.answer('no');
+ for(const id of ['landTravel','rails','engine','animalPulled','passengers','wheels','twoWheels','runners'])assert.equal(g.eligible({id}),false,id);
+});
+test('no to wheels suppresses two-wheel follow-up and undo restores eligibility',()=>{
+ const g=new Game('objects');
+ for(const [id,answer] of [['transport','yes'],['landTravel','yes'],['wheels','yes']]){g.question={id,text:id};g.answer(answer)}
+ assert.equal(g.eligible({id:'twoWheels'}),true);
+ g.undo();g.question={id:'wheels',text:'Wheels?'};g.answer('no');
+ assert.equal(g.eligible({id:'twoWheels'}),false);
+ assert.notEqual(g.question?.id,'twoWheels');
+});
+test('probably and unknown do not establish a prerequisite as certain',()=>{
+ for(const answer of ['probably','unknown']){
+  const g=new Game('objects');g.question={id:'transport',text:'Transport?'};g.answer(answer);
+  assert.equal(g.eligible({id:'landTravel'}),false);
+  assert.equal(g.implied('landTravel'),false);
+ }
+});
+test('music genres wait for music and object games exclude animal questions',()=>{
+ const g=new Game('people');assert.equal(g.eligible({id:'rock'}),false);
+ g.question={id:'music',text:'Music?'};g.answer('yes');
+ assert.equal(g.eligible({id:'rock'}),true);
+ const o=new Game('objects');assert.equal(o.eligible({id:'mammal'}),false);
+ assert.equal(o.eligible({id:'specificallyMale'}),false);
+});
+test('no to mammal suppresses mammal anatomy across selection paths',()=>{
+ const g=new Game('animals');g.answer('no');
+ for(const id of ['hooves','horns','antlers','wool','mane'])assert.equal(g.eligible({id}),false,id);
+});
+test('unknown learned transport mechanics stay unknown',()=>{
+ const learned={id:'objects-custom-cart',name:'Custom cart',category:'objects',yes:['transport'],no:[],aliases:[]};
+ assert.equal(fact(learned,'wheels'),.5);
+ assert.equal(fact(learned,'engine'),.5);
 });

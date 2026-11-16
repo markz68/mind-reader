@@ -1,10 +1,18 @@
-import {entries,questions} from './data.js?v=0.5.2';
+import {entries,questions} from './data.js?v=0.6.0';
 export const ANSWERS=[['yes','Yes'],['no','No'],['probably','Probably'],['probablyNot','Probably not'],['unknown',"Don't know"]];
 const CATEGORIES={real:'people',fictional:'characters',animal:'animals',place:'places',object:'objects'};
 const EXCLUSIVE_GROUPS=[Object.keys(CATEGORIES),['country','city','landmark'],['uk','france','ireland','usa']];
 const PLACE_TYPES=new Set(['country','city','landmark']);
 const REGIONS=new Set(['europe','usa','uk','france','ireland']);
 const CATEGORY_TRAITS={people:new Set(['alive','historical','science','music','sports','royalty','space']),characters:new Set(['superhero','magic','movie','television','book','detective','space','royalty']),animals:new Set(['mammal','bird','water','pet','large','flight']),objects:new Set(['electronic','transport','kitchen','handheld','communication','flight','large'])};
+
+// Narrow details require the broader subject to have been established.
+const ANIMAL_QUESTIONS=new Set('mammal bird pet fast fastestLand striped spotted mane wild carnivore africa reptile insect farm domesticated herbivore omnivore hooves horns wool antlers eggs fish amphibian arachnid invertebrate insectivore arctic desert specificallyMale'.split(' '));
+const OBJECT_QUESTIONS=new Set('electronic transport kitchen handheld communication instrument strings wooden powered sportEquipment indoors landTravel rails engine twoWheels animalPulled passengers wheels runners'.split(' '));
+const PERSON_QUESTIONS=new Set('american british male female'.split(' '));
+const MUSIC_QUESTIONS=new Set('rock pop countryMusic solo guitarist'.split(' '));
+const PARENTS={hooves:'mammal',horns:'mammal',wool:'mammal',antlers:'mammal',mane:'mammal',fastestLand:'fast',rock:'music',pop:'music',countryMusic:'music',solo:'music',guitarist:'music',strings:'instrument',landTravel:'transport',rails:'landTravel',engine:'transport',twoWheels:'wheels',animalPulled:'landTravel',passengers:'transport',wheels:'landTravel',runners:'landTravel'};
+
 const LABELS=Object.fromEntries(questions.map(q=>[q.id,q.text]));
 const RESPONSE_PROB={yes:.96,no:.04,probably:.73,probablyNot:.27,unknown:null};
 const entropy=p=>p<=0||p>=1?0:-p*Math.log2(p)-(1-p)*Math.log2(1-p);
@@ -75,7 +83,28 @@ export class Game{
   const denominator=scored.reduce((sum,x)=>sum+Math.exp(x.logScore-maximum),0);
   return scored.map(x=>({entry:x.entry,score:x.logScore,probability:Math.exp(x.logScore-maximum)/denominator})).sort((a,b)=>b.probability-a.probability);
  }
+ established(id){
+  const explicit=[...this.history].reverse().find(h=>h.id===id&&['yes','no'].includes(h.answer));
+  if(explicit)return explicit.answer==='yes';
+  if(Object.hasOwn(CATEGORIES,id)&&this.category)return CATEGORIES[id]===this.category;
+  return null;
+ }
+ eligible(q){
+  const id=q.id;
+  if(this.history.some(h=>h.id===id)||this.implied(id))return false;
+  const category=this.category||Object.entries(CATEGORIES).find(([tag])=>this.established(tag)===true)?.[1];
+  if(this.category&&Object.hasOwn(CATEGORIES,id))return false;
+  if(category){
+   if(ANIMAL_QUESTIONS.has(id)&&category!=='animals')return false;
+   if(OBJECT_QUESTIONS.has(id)&&category!=='objects')return false;
+   if((PERSON_QUESTIONS.has(id)||MUSIC_QUESTIONS.has(id))&&!['people','characters'].includes(category))return false;
+  }
+  if(PARENTS[id]&&this.established(PARENTS[id])!==true)return false;
+  return true;
+ }
  implied(id){
+  const parent=PARENTS[id];
+  if(parent&&this.established(parent)===false)return true;
   const group=groupFor(id);
   for(const h of this.history){
    if(h.answer!=='yes'&&h.answer!=='no')continue;
@@ -100,6 +129,18 @@ export class Game{
   if(!this.history.length&&this.category==='animals'){
    this.question=questions.find(q=>q.id==='mammal');return;
   }
+  // Establish the broad object type before specialized details.
+  const objectMode=this.category==='objects'||this.established('object')===true;
+  if(objectMode){
+   const broad=['handheld','indoors','transport'];
+   const nextBroad=broad.find(id=>!asked.has(id)&&!this.implied(id));
+   if(nextBroad){this.question=questions.find(q=>q.id===nextBroad);return}
+   if(this.established('transport')===true){
+    const branch=['landTravel','rails','engine','animalPulled','passengers','wheels','twoWheels','runners'];
+    const nextBranch=branch.map(id=>questions.find(q=>q.id===id)).find(q=>this.eligible(q)&&ranked.some(x=>fact(x.entry,q.id)===1)&&ranked.some(x=>fact(x.entry,q.id)!==1));
+    if(nextBranch){this.question=nextBranch;return}
+   }
+  }
   // Start a short confirmation phase once one candidate clearly leads.
   // Reset it when later answers change the leader.
   const leader=ranked[0];
@@ -112,7 +153,7 @@ export class Game{
   // instead of immediately declaring defeat.
   if(!ranked.length){
    const categoryQuestions={animals:new Set(['mammal','bird','water','pet','large','flight','fast','fastestLand','striped','spotted','mane','wild','carnivore','africa','asia','ocean','reptile','insect','farm','domesticated','herbivore','omnivore','hooves','horns','wool','antlers','eggs','fish','amphibian','arachnid','invertebrate','insectivore','arctic','desert']),people:new Set(['alive','historical','science','music','sports','royalty','space','american','british','rock','pop','countryMusic','solo','guitarist','actor','politics','male','female']),characters:new Set(['superhero','magic','movie','television','book','detective','space','royalty','american','british','male','female','animated','fantasy']),places:new Set(['country','city','landmark','europe','usa','uk','france','ireland','asia','fictionalWorld']),objects:new Set(['electronic','transport','kitchen','handheld','communication','flight','large','instrument','strings','wooden','powered','sportEquipment'])};
-   this.question=questions.find(q=>!asked.has(q.id)&&!this.implied(q.id)&&(!this.category||categoryQuestions[this.category]?.has(q.id)))||null;
+   this.question=questions.find(q=>this.eligible(q)&&(!this.category||categoryQuestions[this.category]?.has(q.id)))||null;
    return;
   }
   // Resolve Cow/Bull (and Chicken/Rooster) using sex, not horns.
@@ -120,7 +161,7 @@ export class Game{
    const topNames=new Set(ranked.slice(0,8).map(x=>x.entry.name));
    if((topNames.has('Cow')&&topNames.has('Bull'))||(topNames.has('Chicken')&&topNames.has('Rooster'))){
     const relevant=ranked.filter(x=>['Cow','Bull','Chicken','Rooster'].includes(x.entry.name)).reduce((s,x)=>s+x.probability,0);
-    if(relevant>=.28&&this.history.length>=4){this.question=questions.find(q=>q.id==='specificallyMale');return}
+    if(relevant>=.20&&this.history.length>=4){this.question=questions.find(q=>q.id==='specificallyMale');return}
    }
   }
   // During confirmation prefer a high-value fact of the leading candidate
@@ -128,7 +169,7 @@ export class Game{
   if(this.confirmation&&this.history.length-this.confirmation.start<2){
    let confirm=null,confirmScore=-1;
    for(const q of questions){
-    if(asked.has(q.id)||this.implied(q.id))continue;
+    if(!this.eligible(q))continue;
     if(this.category&&Object.hasOwn(CATEGORIES,q.id))continue;
     if(this.category==='animals'&&!['mammal','bird','water','pet','large','flight','fast','fastestLand','striped','spotted','mane','wild','carnivore','africa','asia','ocean','reptile','insect','farm','domesticated','herbivore','omnivore','hooves','horns','wool','antlers','eggs','fish','amphibian','arachnid','invertebrate','insectivore','arctic','desert'].includes(q.id))continue;
     const topFact=fact(leader.entry,q.id);
@@ -145,7 +186,7 @@ export class Game{
   }
   let best=null,bestGain=0;
   for(const q of questions){
-   if(asked.has(q.id)||this.implied(q.id))continue;
+   if(!this.eligible(q))continue;
    if(this.category&&Object.hasOwn(CATEGORIES,q.id))continue;
    if(this.category==='places'&&['real','fictional','animal','object'].includes(q.id))continue;
    const yes=ranked.reduce((s,x)=>s+(fact(x.entry,q.id)===1?x.probability:0),0);
@@ -168,7 +209,7 @@ export class Game{
    const top=ranked.slice(0,Math.min(12,ranked.length));
    let fallback=-1;
    for(const q of questions){
-    if(asked.has(q.id)||this.implied(q.id))continue;
+    if(!this.eligible(q))continue;
     if(this.category&&Object.hasOwn(CATEGORIES,q.id))continue;
     const yes=top.filter(x=>fact(x.entry,q.id)===1).length;
     const no=top.filter(x=>fact(x.entry,q.id)===0).length;
@@ -179,7 +220,7 @@ export class Game{
   // Never concede while an informative, unasked question remains.
   if(!best){
    const pool=ranked.slice(0,Math.min(8,ranked.length));
-   best=questions.find(q=>!asked.has(q.id)&&!this.implied(q.id)&&(!this.category||!Object.hasOwn(CATEGORIES,q.id))&&pool.some(x=>fact(x.entry,q.id)===1))||null;
+   best=questions.find(q=>this.eligible(q)&&(!this.category||!Object.hasOwn(CATEGORIES,q.id))&&pool.some(x=>fact(x.entry,q.id)===1))||null;
   }
   this.question=best;
  }

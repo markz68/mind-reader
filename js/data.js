@@ -302,3 +302,49 @@ for(const entry of entries.filter(e=>e.category==='animals')){
  if(sexSpecific[entry.name]==='yes'&&!entry.yes.includes('specificallyMale'))entry.yes.push('specificallyMale');
  if(sexSpecific[entry.name]==='no'&&!entry.no.includes('specificallyMale'))entry.no.push('specificallyMale');
 }
+
+
+// v0.6.0: transport branches use explicit facts; missing details stay unknown.
+questions.push(...[
+ ['indoors','Is it typically found indoors?'],
+ ['landTravel','Does it primarily travel on land?'],
+ ['rails','Does it travel on rails?'],
+ ['engine','Does it normally have a motor or engine?'],
+ ['twoWheels','Does it have exactly two wheels?'],
+ ['animalPulled','Is it pulled by an animal?'],
+ ['passengers','Is it primarily designed to carry people?'],
+ ['wheels','Does it have wheels?'],
+ ['runners','Does it slide on runners over snow or ice?']
+].map(([id,text])=>({id,text})));
+questions.find(q=>q.id==='water').text='Does it primarily live or travel on water?';
+entries.push(
+ make('Sleigh','objects','object transport landTravel animalPulled passengers runners'),
+ make('Horse-drawn carriage','objects','object transport landTravel animalPulled passengers wheels'),
+ make('Wagon','objects','object transport landTravel animalPulled wheels'),
+ make('Sled','objects','object transport landTravel passengers runners'),
+ make('Skateboard','objects','object transport landTravel passengers wheels'),
+ make('Wheelbarrow','objects','object transport landTravel wheels')
+);
+const transportFacts={
+ Bicycle:{yes:'landTravel twoWheels passengers wheels',no:'rails engine animalPulled runners'},
+ Car:{yes:'landTravel engine passengers wheels',no:'rails twoWheels animalPulled runners'},
+ Train:{yes:'landTravel rails engine passengers wheels',no:'twoWheels animalPulled runners'},
+ Airplane:{yes:'engine passengers wheels',no:'landTravel rails twoWheels animalPulled runners'},
+ Boat:{yes:'passengers',no:'landTravel rails twoWheels animalPulled wheels runners'},
+ Sleigh:{yes:'',no:'rails engine twoWheels wheels flight water indoors handheld'},
+ 'Horse-drawn carriage':{yes:'',no:'rails engine twoWheels runners flight water indoors handheld'},
+ Wagon:{yes:'',no:'rails engine twoWheels passengers runners flight water indoors handheld'},
+ Sled:{yes:'',no:'rails engine twoWheels animalPulled wheels flight water indoors handheld'},
+ Skateboard:{yes:'',no:'rails engine twoWheels animalPulled runners flight water indoors handheld'},
+ Wheelbarrow:{yes:'',no:'rails engine twoWheels animalPulled passengers runners flight water indoors handheld'}
+};
+for(const entry of entries.filter(e=>e.category==='objects')){
+ const traits=transportFacts[entry.name];
+ if(traits){
+  entry.no=entry.no||[];
+  for(const id of traits.yes.split(' ').filter(Boolean))if(!entry.yes.includes(id))entry.yes.push(id);
+  for(const id of traits.no.split(' ').filter(Boolean))if(!entry.no.includes(id))entry.no.push(id);
+  for(const id of ['handheld','indoors'])if(!entry.no.includes(id))entry.no.push(id);
+  if(entry.yes.includes('landTravel'))for(const id of ['water','flight'])if(!entry.no.includes(id))entry.no.push(id);
+ }else if(!entry.yes.includes('indoors'))entry.yes.push('indoors');
+}
