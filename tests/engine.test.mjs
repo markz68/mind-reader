@@ -118,3 +118,18 @@ test('learning validation rejects contradictory facts',async()=>{
  assert.equal(validEntry({id:'animals-cheetah',name:'Cheetah',category:'animals',yes:['mammal'],no:['mammal']}),false);
  assert.equal(validEntry({id:'animals-cheetah',name:'Cheetah',category:'animals',yes:['mammal'],no:['pet']}),true);
 });
+
+test('learned musician is guessed when no distinguishing questions remain',()=>{
+ const springsteen={id:'people-bruce-springsteen',name:'Bruce Springsteen',category:'people',yes:['alive','music'],no:[],aliases:[]};
+ const g=new Game('people',[springsteen]);
+ g.question={id:'alive',text:'Is it alive today?'};g.answer('yes');
+ g.question={id:'music',text:'Is it associated with music?'};g.answer('yes');
+ g.question=null;
+ assert.equal(g.shouldGuess(),true);
+ let found=false;
+ for(let i=0;i<3;i++){
+  if(g.candidate()?.name==='Bruce Springsteen'){found=true;break}
+  g.guessWrong();
+ }
+ assert.equal(found,true,'Bruce Springsteen should be among the three guesses');
+});
