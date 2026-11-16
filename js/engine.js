@@ -82,7 +82,6 @@ export class Game{
    // An explicit answer to a broader trait makes its narrower follow-up redundant.
    if(id==='fastestLand'&&h.id==='fast'&&h.answer==='no')return true;
    if(id==='fast'&&h.id==='fastestLand'&&h.answer==='yes')return true;
-   if(id==='farm'&&h.id==='domesticated'&&h.answer==='no')return false;
    if(h.answer==='yes'&&group&&group.includes(h.id))return true;
    if(h.answer==='yes'&&h.id==='europe'&&id==='usa')return true;
    if(h.answer==='yes'&&h.id==='usa'&&id==='europe')return true;
