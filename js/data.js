@@ -281,9 +281,9 @@ for(const entry of entries.filter(e=>e.category==='animals')){
 // A few familiar farm animals need explicit distinguishing negatives.
 for(const entry of entries.filter(e=>e.category==='animals')){
  const exclusions={
-  'Cow':'pet carnivore spotted striped mane fast fastestLand antlers wool eggs',
-  'Bull':'pet carnivore spotted striped mane fast fastestLand antlers wool eggs',
-  'Sheep':'carnivore spotted striped mane fast fastestLand antlers horns',
+  'Cow':'pet carnivore striped mane fast fastestLand antlers wool eggs',
+  'Bull':'pet carnivore striped mane fast fastestLand antlers wool eggs',
+  'Sheep':'carnivore striped mane fast fastestLand antlers',
   'Goat':'carnivore spotted striped mane fastestLand antlers wool',
   'Pig':'carnivore spotted striped mane fastestLand antlers wool horns',
   'Horse':'carnivore spotted striped mane fastestLand antlers horns wool',
