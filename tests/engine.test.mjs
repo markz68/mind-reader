@@ -203,8 +203,8 @@ test('Africa cannot resurrect elephant and giraffe after fast and spots',()=>{
 });
 test('contradictory evidence never restores excluded candidates',()=>{
  const g=new Game('animals');
- g.question={id:'spotted',text:'Spotted?'};g.answer('yes');
- g.question={id:'instrument',text:'Instrument?'};g.answer('yes');
+ g.question={id:'mammal',text:'Mammal?'};g.answer('yes');
+ g.question={id:'bird',text:'Bird?'};g.answer('yes');
  assert.equal(g.scores().length,0);
  assert.equal(g.candidate(),null);
 });
