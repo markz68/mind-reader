@@ -140,6 +140,6 @@ test('learned unrecorded traits remain unknown',()=>{
 test('question selection can distinguish musicians by genre',()=>{
  const g=new Game('people');
  g.question={id:'music',text:'Is it associated with music?'};g.answer('yes');
- const eligible=['rock','pop','countryMusic','american','british','guitarist','solo','male','female'];
+ const eligible=['alive','historical','science','sports','rock','pop','countryMusic','american','british','guitarist','solo','male','female','actor','politics'];
  assert.ok(g.question&&eligible.includes(g.question.id),'expected a useful musician trait, got '+g.question?.id);
 });
