@@ -177,3 +177,15 @@ test('a cheetah can be distinguished by fastest land animal',()=>{
  g.question={id:'fastestLand',text:'Is it the fastest land animal?'};g.answer('yes');
  assert.equal(g.candidate()?.name,'Cheetah');
 });
+
+test('never guess horse after just speed and stripes even if no question selected',()=>{
+ const g=new Game('animals');
+ g.question={id:'fast',text:'Fast?'};g.answer('yes');
+ g.question={id:'striped',text:'Striped?'};g.answer('no');
+ g.question=null;
+ assert.equal(g.shouldGuess(),false);
+});
+test('lion is not tagged as an animal especially known for speed',()=>{
+ assert.equal(fact(entries.find(e=>e.name==='Lion'),'fast'),0);
+ assert.equal(fact(entries.find(e=>e.name==='Cheetah'),'fast'),1);
+});
