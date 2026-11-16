@@ -117,3 +117,5 @@ for(const entry of entries){
  if(entry.name==='Giraffe'&&!entry.yes.includes('spotted'))entry.yes.push('spotted');
  if(entry.category==='animals')entry.no=(animalNo[entry.name]||'').split(' ').filter(Boolean);
 }
+
+for(const entry of entries)entry.builtIn=true;
