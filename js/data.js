@@ -293,3 +293,12 @@ for(const entry of entries.filter(e=>e.category==='animals')){
  }[entry.name];
  if(exclusions)for(const id of exclusions.split(' '))if(!entry.yes.includes(id)&&!entry.no.includes(id))entry.no.push(id);
 }
+
+// v0.5.2: Distinguish common animal names from sex-specific terms.
+// Horns vary by cattle breed and sex, so horns alone cannot identify a bull.
+questions.push({id:'specificallyMale',text:'Are you thinking specifically of an adult male animal?'});
+const sexSpecific={Bull:'yes',Rooster:'yes',Cow:'no'};
+for(const entry of entries.filter(e=>e.category==='animals')){
+ if(sexSpecific[entry.name]==='yes'&&!entry.yes.includes('specificallyMale'))entry.yes.push('specificallyMale');
+ if(sexSpecific[entry.name]==='no'&&!entry.no.includes('specificallyMale'))entry.no.push('specificallyMale');
+}
