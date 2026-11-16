@@ -143,3 +143,22 @@ test('question selection can distinguish musicians by genre',()=>{
  const eligible=['alive','historical','science','sports','rock','pop','countryMusic','american','british','guitarist','solo','male','female','actor','politics'];
  assert.ok(g.question&&eligible.includes(g.question.id),'expected a useful musician trait, got '+g.question?.id);
 });
+
+test('cheetah has distinctive traits unlike lion and tiger',()=>{
+ const cheetah=entries.find(e=>e.name==='Cheetah');
+ const lion=entries.find(e=>e.name==='Lion');
+ const tiger=entries.find(e=>e.name==='Tiger');
+ assert.equal(fact(cheetah,'fastestLand'),1);
+ assert.equal(fact(lion,'fastestLand'),0);
+ assert.equal(fact(tiger,'fastestLand'),0);
+ assert.equal(fact(cheetah,'spotted'),1);
+ assert.equal(fact(tiger,'striped'),1);
+});
+test('animal game keeps asking diagnostic questions before early guesses',()=>{
+ const g=new Game('animals');
+ g.question={id:'mammal',text:'Is it a mammal?'};g.answer('yes');
+ g.question={id:'wild',text:'Is it wild?'};g.answer('yes');
+ g.question={id:'fast',text:'Is it fast?'};g.answer('yes');
+ assert.equal(g.shouldGuess(),false);
+ assert.ok(g.question,'should continue with a distinguishing question');
+});
